@@ -19,6 +19,11 @@ window.boxConfig = {
   D: null
 };
 
+// 当前高亮的柜子模型列表（整个柜子可能由多个模型组成）
+let currentHighlightedCabinetModels = [];
+// 存储原始材质，用于恢复
+const originalMaterialsMap = new Map();
+
 /**
  * 初始化模型配置映射表和模型组映射表
  */
@@ -40,6 +45,19 @@ function initModelMaps() {
   
   console.log('模型映射表已初始化');
 }
+
+// 初始化事件监听器（用于响应复原按钮等操作）
+function initEventListeners() {
+  // 监听清除柜子高亮事件
+  EventBus.$off('clearCabinetHighlight');
+  EventBus.$on('clearCabinetHighlight', () => {
+    console.log('收到清除柜子高亮事件');
+    clearCabinetHighlight(window.app);
+  });
+}
+
+// 立即初始化事件监听器
+initEventListeners();
 
 export function loaderFloorManage(app) {
   // ... existing code ...
@@ -178,6 +196,11 @@ function setupARoomInteraction(app) {
 
   // 添加鼠标点击事件
   window.addEventListener('click', (event) => {
+    // 如果点击的是标签，不处理（让标签的点击事件处理）
+    if (event.target.closest('.floorText-3d')) {
+      return;
+    }
+    
     // 计算鼠标在归一化设备坐标中的位置
     const mouse = new THREE.Vector2();
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -188,18 +211,285 @@ function setupARoomInteraction(app) {
     // 射线与模型相交检测
     const intersects = raycaster.intersectObject(app.aRoomModel, true);
     if (intersects.length > 0) {
-      // 点击aRoom内的任意模型时，不再根据模型名称判断显示box
-      // 取消显示边缘发光效果等旧逻辑
-      EventBus.$emit('showBox', { show: false });
-      removeAllEdgeEffects(app);
+      const clickedObject = intersects[0].object;
+      console.log('点击的模型名称:', clickedObject.name);
+      
+      // 查找点击的模型是否属于某个电气柜
+      const cabinetConfig = findCabinetConfigByModel(clickedObject, app.aRoomModel, roomA);
+      
+      if (cabinetConfig) {
+        console.log('找到电气柜配置:', cabinetConfig.id);
+        
+        // 显示详细图
+        window.currentBuilding = 'A';
+        window.isTriggerLabelVisible = true;
+        EventBus.$emit('showBox', { show: true, config: cabinetConfig });
+        
+        // 高亮选中的柜子
+        highlightCabinet(app, cabinetConfig.triggerModel, app.aRoomModel);
+      } else {
+        // 点击其他区域，隐藏详细图并取消高亮
+        EventBus.$emit('showBox', { show: false });
+        removeAllEdgeEffects(app);
+        clearCabinetHighlight(app);
+      }
       // 点击后关闭点击模式
       isPicking = false;
     } else {
-      // 点击空白处也隐藏box组件
+      // 点击空白处也隐藏box组件并取消高亮
       EventBus.$emit('showBox', { show: false });
       removeAllEdgeEffects(app);
+      clearCabinetHighlight(app);
     }
   });
+}
+
+/**
+ * 根据点击的模型查找对应的电气柜配置
+ * @param {Object} clickedObject 点击的3D对象
+ * @param {Object} roomModel 房间模型
+ * @param {Array} roomConfig 房间配置数组
+ * @returns {Object|null} 电气柜配置或null
+ */
+function findCabinetConfigByModel(clickedObject, roomModel, roomConfig) {
+  // 获取点击对象的名称
+  let objectName = clickedObject.name;
+  
+  // 首先检查点击的对象是否直接是 triggerModel
+  for (const config of roomConfig) {
+    if (config.triggerModel === objectName) {
+      return config;
+    }
+  }
+  
+  // 如果不是直接点击 triggerModel，检查是否点击的是柜子的子对象
+  // 向上遍历父级，检查父级是否是某个 triggerModel
+  let parent = clickedObject.parent;
+  while (parent && parent !== roomModel) {
+    for (const config of roomConfig) {
+      if (config.triggerModel === parent.name) {
+        return config;
+      }
+    }
+    parent = parent.parent;
+  }
+  
+  // 查找点击对象附近的电气柜（通过距离判断）
+  // 获取点击对象的世界位置
+  const clickedPosition = new THREE.Vector3();
+  clickedObject.getWorldPosition(clickedPosition);
+  
+  let closestConfig = null;
+  let closestDistance = Infinity;
+  const maxDistance = 15; // 增大最大搜索距离，确保能找到柜子的其他部分
+  
+  for (const config of roomConfig) {
+    const triggerObj = roomModel.getObjectByName(config.triggerModel);
+    if (triggerObj) {
+      const triggerPosition = new THREE.Vector3();
+      triggerObj.getWorldPosition(triggerPosition);
+      
+      // 主要考虑水平距离（X和Z轴），因为柜子是垂直排列的
+      const horizontalDistance = Math.sqrt(
+        Math.pow(clickedPosition.x - triggerPosition.x, 2) +
+        Math.pow(clickedPosition.z - triggerPosition.z, 2)
+      );
+      
+      // 也检查垂直方向上的关系（点击位置应该在 triggerModel 下方或附近）
+      const verticalDiff = triggerPosition.y - clickedPosition.y;
+      
+      // 如果水平距离很近，且点击位置在 triggerModel 下方（或附近），认为是同一个柜子
+      if (horizontalDistance < 3 && verticalDiff >= -2 && verticalDiff <= 20) {
+        if (horizontalDistance < closestDistance) {
+          closestDistance = horizontalDistance;
+          closestConfig = config;
+        }
+      }
+    }
+  }
+  
+  return closestConfig;
+}
+
+/**
+ * 查找与triggerModel相关联的所有柜子模型（整个柜子可能由多个模型组成）
+ * @param {string} triggerModelName 触发模型名称
+ * @param {Object} roomModel 房间模型
+ * @returns {Array} 柜子相关的所有模型
+ */
+function findAllCabinetModels(triggerModelName, roomModel) {
+  const cabinetModels = [];
+  
+  const triggerModel = roomModel.getObjectByName(triggerModelName);
+  if (!triggerModel) {
+    console.warn('未找到触发模型:', triggerModelName);
+    return cabinetModels;
+  }
+  
+  // 获取triggerModel的边界盒
+  const triggerBox = new THREE.Box3().setFromObject(triggerModel);
+  const triggerCenter = new THREE.Vector3();
+  triggerBox.getCenter(triggerCenter);
+  
+  // 柜子尺寸
+  const cabinetWidth = triggerBox.max.x - triggerBox.min.x;
+  const cabinetDepth = triggerBox.max.z - triggerBox.min.z;
+  
+  // 使用边界盒的中心X和Z坐标，以及底部Y坐标作为柜子的水平位置参考
+  const cabinetCenterX = triggerCenter.x;
+  const cabinetCenterZ = triggerCenter.z;
+  const cabinetTopY = triggerBox.max.y;
+  
+  // 搜索半径：基于柜子尺寸，水平方向（稍微放宽）
+  const searchRadiusX = Math.max(cabinetWidth * 0.8, 3);
+  const searchRadiusZ = Math.max(cabinetDepth * 0.8, 3);
+  
+  // 垂直搜索范围：从柜子顶部向下搜索（柜子高度约50-80个单位）
+  const searchHeightDown = 80; // 向下搜索范围
+  const searchHeightUp = 5;    // 向上搜索范围（允许一些误差）
+  
+  console.log(`搜索柜子 ${triggerModelName}，中心位置: (${cabinetCenterX.toFixed(2)}, ${cabinetTopY.toFixed(2)}, ${cabinetCenterZ.toFixed(2)})`);
+  console.log(`搜索范围: X±${searchRadiusX.toFixed(2)}, Z±${searchRadiusZ.toFixed(2)}, Y向下${searchHeightDown}`);
+  
+  // 遍历房间模型中的所有mesh，找到与triggerModel位置接近的模型
+  roomModel.traverse((obj) => {
+    if (obj.isMesh) {
+      // 获取对象的边界盒中心
+      const objBox = new THREE.Box3().setFromObject(obj);
+      const objCenter = new THREE.Vector3();
+      objBox.getCenter(objCenter);
+      
+      // 计算水平距离（相对于柜子中心）
+      const dx = Math.abs(objCenter.x - cabinetCenterX);
+      const dz = Math.abs(objCenter.z - cabinetCenterZ);
+      
+      // 垂直距离：对象中心相对于柜子顶部的距离
+      const dy = cabinetTopY - objCenter.y;
+      
+      // 如果在柜子的水平范围内，且在合理的垂直范围内
+      if (dx <= searchRadiusX && dz <= searchRadiusZ && dy >= -searchHeightUp && dy <= searchHeightDown) {
+        cabinetModels.push(obj);
+      }
+    }
+  });
+  
+  console.log(`找到柜子 ${triggerModelName} 的 ${cabinetModels.length} 个组成部分`);
+  return cabinetModels;
+}
+
+/**
+ * 高亮电气柜（整个柜子，包括顶部和下方柜体）
+ * @param {Object} app 应用对象
+ * @param {string} triggerModelName 触发模型名称
+ * @param {Object} roomModel 房间模型
+ */
+function highlightCabinet(app, triggerModelName, roomModel) {
+  // 先清除之前的高亮
+  clearCabinetHighlight(app);
+  
+  // 查找整个柜子的所有组成部分
+  const cabinetModels = findAllCabinetModels(triggerModelName, roomModel);
+  
+  if (cabinetModels.length === 0) {
+    console.warn('未找到柜子模型:', triggerModelName);
+    return;
+  }
+  
+  currentHighlightedCabinetModels = cabinetModels;
+  
+  // 为所有柜子部件应用高亮效果
+  cabinetModels.forEach((obj) => {
+    if (obj.isMesh && obj.material) {
+      // 保存原始材质
+      if (!originalMaterialsMap.has(obj.uuid)) {
+        if (Array.isArray(obj.material)) {
+          originalMaterialsMap.set(obj.uuid, obj.material.map(m => m.clone()));
+        } else {
+          originalMaterialsMap.set(obj.uuid, obj.material.clone());
+        }
+      }
+      
+      // 应用高亮材质 - 使用更明显的发光效果
+      if (Array.isArray(obj.material)) {
+        obj.material = obj.material.map(m => {
+          const highlightMaterial = m.clone();
+          highlightMaterial.emissive = new THREE.Color(0x00ffff);
+          highlightMaterial.emissiveIntensity = 0.4;
+          return highlightMaterial;
+        });
+      } else {
+        const highlightMaterial = obj.material.clone();
+        highlightMaterial.emissive = new THREE.Color(0x00ffff);
+        highlightMaterial.emissiveIntensity = 0.4;
+        obj.material = highlightMaterial;
+      }
+      
+      // 为每个部件添加边框
+      addOutlineToMesh(obj);
+    }
+  });
+  
+  console.log(`已高亮柜子 ${triggerModelName}，共 ${cabinetModels.length} 个部件`);
+}
+
+/**
+ * 为单个Mesh添加外发光边框
+ * @param {Object} mesh Mesh对象
+ */
+function addOutlineToMesh(mesh) {
+  if (!mesh.isMesh || !mesh.geometry) return;
+  
+  // 检查是否已经有边框
+  const existingOutline = mesh.children.find(child => child.name === 'cabinetOutline');
+  if (existingOutline) return;
+  
+  // 创建边缘几何体
+  const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
+  const lineMaterial = new THREE.LineBasicMaterial({ 
+    color: 0x00ffff, 
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.9
+  });
+  const line = new THREE.LineSegments(edges, lineMaterial);
+  line.name = 'cabinetOutline';
+  line.raycast = () => {}; // 禁止射线检测
+  mesh.add(line);
+}
+
+/**
+ * 清除柜子高亮效果
+ * @param {Object} app 应用对象
+ */
+function clearCabinetHighlight(app) {
+  if (currentHighlightedCabinetModels.length === 0) return;
+  
+  // 恢复所有部件的原始材质并移除边框
+  currentHighlightedCabinetModels.forEach((obj) => {
+    if (obj.isMesh) {
+      // 恢复原始材质
+      if (originalMaterialsMap.has(obj.uuid)) {
+        obj.material = originalMaterialsMap.get(obj.uuid);
+        originalMaterialsMap.delete(obj.uuid);
+      }
+      
+      // 移除边框
+      const outlines = [];
+      obj.children.forEach(child => {
+        if (child.name === 'cabinetOutline') {
+          outlines.push(child);
+        }
+      });
+      outlines.forEach(outline => {
+        obj.remove(outline);
+        if (outline.geometry) outline.geometry.dispose();
+        if (outline.material) outline.material.dispose();
+      });
+    }
+  });
+  
+  currentHighlightedCabinetModels = [];
+  console.log('已清除柜子高亮');
 }
 // 创建 设备标签
 function createTriggerLabels(app) {
@@ -233,15 +523,19 @@ window.triggerLabelClick = function (event, id, building) {
   event.stopPropagation();
   console.log('triggerLabelClick 被调用, id:', id, 'building:', building);
   let config;
+  let roomModel;
 
   building = building || 'A';
 
   if (building === 'A') {
     config = roomA.find(item => item.id === id);
+    roomModel = window.app ? window.app.aRoomModel : null;
   } else if (building === 'B') {
     config = roomB.find(item => item.id === id);
+    roomModel = window.app ? window.app.bRoomModel : null;
   } else if (building === 'D') {
     config = roomD.find(item => item.id === id);
+    roomModel = window.app ? window.app.dRoomModel : null;
   } else {
     console.warn(`未知的楼座: ${building}`);
     return;
@@ -253,6 +547,11 @@ window.triggerLabelClick = function (event, id, building) {
     // 无论是点击同一座还是另一座的标签，都直接发送showBox事件，传入新的配置
     window.isTriggerLabelVisible = true;
     EventBus.$emit('showBox', { show: true, config });
+    
+    // 高亮对应的柜子
+    if (window.app && roomModel) {
+      highlightCabinet(window.app, config.triggerModel, roomModel);
+    }
   }
 };
 
@@ -451,6 +750,9 @@ export function removeElectricWireAnimation(app) {
     });
   }
   
+  // 清除柜子高亮效果
+  clearCabinetHighlight(app);
+  
   // 隐藏A-room模型
   if (app.aRoomModel) {
     app.aRoomModel.visible = false;
@@ -464,6 +766,16 @@ export function removeElectricWireAnimation(app) {
   // 隐藏D-room模型
   if (app.dRoomModel) {
     app.dRoomModel.visible = false;
+  }
+  
+  // 移除B座和D座的点击事件监听器
+  if (app.bRoomClickHandler) {
+    window.removeEventListener('click', app.bRoomClickHandler);
+    app.bRoomClickHandler = null;
+  }
+  if (app.dRoomClickHandler) {
+    window.removeEventListener('click', app.dRoomClickHandler);
+    app.dRoomClickHandler = null;
   }
   
   // 显示原始模型
@@ -763,6 +1075,9 @@ function showBRoomModel(app) {
 
     // 设置B座配电室的光照
     setupBRoomPowerRoomLighting(app);
+    
+    // 设置B座模型的交互功能（点击柜子）
+    setupBRoomInteraction(app);
 
     // 使用flyTo方法平滑过渡到新的相机位置
     app.flyTo({
@@ -798,6 +1113,62 @@ function showBRoomModel(app) {
       });
     }
   });
+}
+
+/**
+ * 设置B-room模型的交互功能（点击柜子显示详情）
+ * @param {*} app
+ */
+function setupBRoomInteraction(app) {
+  // 添加B座模型的点击事件监听器
+  const bRoomClickHandler = (event) => {
+    // 如果B座模型不可见，不处理
+    if (!app.bRoomModel || !app.bRoomModel.visible) return;
+    
+    // 如果点击的是标签，不处理
+    if (event.target.closest('.floorText-3d')) return;
+    
+    // 计算鼠标在归一化设备坐标中的位置
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    // 创建射线
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, app.camera);
+    
+    // 射线与B座模型相交检测
+    const intersects = raycaster.intersectObject(app.bRoomModel, true);
+    if (intersects.length > 0) {
+      const clickedObject = intersects[0].object;
+      console.log('B座点击的模型名称:', clickedObject.name);
+      
+      // 查找点击的模型是否属于某个电气柜
+      const cabinetConfig = findCabinetConfigByModel(clickedObject, app.bRoomModel, roomB);
+      
+      if (cabinetConfig) {
+        console.log('找到B座电气柜配置:', cabinetConfig.id);
+        
+        // 显示详细图
+        window.currentBuilding = 'B';
+        window.isTriggerLabelVisible = true;
+        EventBus.$emit('showBox', { show: true, config: cabinetConfig });
+        
+        // 高亮选中的柜子
+        highlightCabinet(app, cabinetConfig.triggerModel, app.bRoomModel);
+      } else {
+        // 点击其他区域，隐藏详细图并取消高亮
+        EventBus.$emit('showBox', { show: false });
+        clearCabinetHighlight(app);
+      }
+    }
+  };
+  
+  // 使用命名函数以便后续可以移除
+  if (!app.bRoomClickHandler) {
+    app.bRoomClickHandler = bRoomClickHandler;
+    window.addEventListener('click', bRoomClickHandler);
+  }
 }
 
 /**
@@ -858,8 +1229,21 @@ function setupBRoomPowerRoomLighting(app) {
     powerRoom.receiveShadow = true;
 
     console.log('已设置B座配电室专用光源和科幻背景');
+    
+    // 触发进入配电室事件，显示操作按钮
+    console.log('触发enterPowerRoom事件, roomId: B-PowerRoom');
+    EventBus.$emit('leavePowerRoom'); // 先触发离开事件，确保状态重置
+    setTimeout(() => {
+      EventBus.$emit('enterPowerRoom', 'B-PowerRoom');
+    }, 100);
   } else {
     console.warn('未找到B座配电室模型');
+    // 即使没有找到配电室模型，也触发事件让按钮显示
+    console.log('触发enterPowerRoom事件, roomId: B-PowerRoom (无配电室模型)');
+    EventBus.$emit('leavePowerRoom');
+    setTimeout(() => {
+      EventBus.$emit('enterPowerRoom', 'B-PowerRoom');
+    }, 100);
   }
 }
 
@@ -949,6 +1333,9 @@ function showDRoomModel(app) {
     
     // 设置D座模型的光照
     setupDRoomLighting(app);
+    
+    // 设置D座模型的交互功能（点击柜子）
+    setupDRoomInteraction(app);
 
     // 使用flyTo方法平滑过渡到新的相机位置
     app.flyTo({
@@ -986,6 +1373,62 @@ function showDRoomModel(app) {
       });
     }
   });
+}
+
+/**
+ * 设置D-room模型的交互功能（点击柜子显示详情）
+ * @param {*} app
+ */
+function setupDRoomInteraction(app) {
+  // 添加D座模型的点击事件监听器
+  const dRoomClickHandler = (event) => {
+    // 如果D座模型不可见，不处理
+    if (!app.dRoomModel || !app.dRoomModel.visible) return;
+    
+    // 如果点击的是标签，不处理
+    if (event.target.closest('.floorText-3d')) return;
+    
+    // 计算鼠标在归一化设备坐标中的位置
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    // 创建射线
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, app.camera);
+    
+    // 射线与D座模型相交检测
+    const intersects = raycaster.intersectObject(app.dRoomModel, true);
+    if (intersects.length > 0) {
+      const clickedObject = intersects[0].object;
+      console.log('D座点击的模型名称:', clickedObject.name);
+      
+      // 查找点击的模型是否属于某个电气柜
+      const cabinetConfig = findCabinetConfigByModel(clickedObject, app.dRoomModel, roomD);
+      
+      if (cabinetConfig) {
+        console.log('找到D座电气柜配置:', cabinetConfig.id);
+        
+        // 显示详细图
+        window.currentBuilding = 'D';
+        window.isTriggerLabelVisible = true;
+        EventBus.$emit('showBox', { show: true, config: cabinetConfig });
+        
+        // 高亮选中的柜子
+        highlightCabinet(app, cabinetConfig.triggerModel, app.dRoomModel);
+      } else {
+        // 点击其他区域，隐藏详细图并取消高亮
+        EventBus.$emit('showBox', { show: false });
+        clearCabinetHighlight(app);
+      }
+    }
+  };
+  
+  // 使用命名函数以便后续可以移除
+  if (!app.dRoomClickHandler) {
+    app.dRoomClickHandler = dRoomClickHandler;
+    window.addEventListener('click', dRoomClickHandler);
+  }
 }
 
 /**
@@ -1105,18 +1548,27 @@ function setupDRoomPowerRoomLighting(app) {
     powerRoom.receiveShadow = true;
 
     console.log('已设置D座配电室专用光源和科幻背景');
+    
+    // 触发进入配电室事件，显示操作按钮
+    console.log('触发enterPowerRoom事件, roomId: D-PowerRoom');
+    EventBus.$emit('leavePowerRoom'); // 先触发离开事件，确保状态重置
+    setTimeout(() => {
+      EventBus.$emit('enterPowerRoom', 'D-PowerRoom');
+    }, 100);
   } else {
     console.warn('未找到D座配电室模型');
+    // 即使没有找到配电室模型，也触发事件让按钮显示
+    console.log('触发enterPowerRoom事件, roomId: D-PowerRoom (无配电室模型)');
+    EventBus.$emit('leavePowerRoom');
+    setTimeout(() => {
+      EventBus.$emit('enterPowerRoom', 'D-PowerRoom');
+    }, 100);
   }
 }
 
-window.addEventListener('click', function (event) {
-  if (window.currentBuilding === 'B' && !event.target.closest('.floorText-3d')) {
-    // 如果当前显示的是B座设备详情，且点击的不是B座标签，则隐藏设备详情
-    window.isTriggerLabelVisible = false;
-    EventBus.$emit('showBox', { show: false });
-  }
-});
+// 注意：B座和D座的点击事件处理已经移动到各自的setup函数中
+// 这里保留一个全局点击监听，用于处理点击空白区域时隐藏详情的逻辑
+// 但是具体的柜子点击逻辑由各座的setup函数处理
 
 // 初始化boxConfig
 function initBoxConfig() {

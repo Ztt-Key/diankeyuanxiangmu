@@ -47,25 +47,39 @@ export default {
     }
   },
   mounted() {
-    // 监听房间变更，根据房间设置按钮可见性
-    EventBus.$on('roomChanged', (data) => {
-      if (data && data.roomId) {
-        this.currentRoomId = data.roomId;
-        // 根据房间ID判断是否显示电路按钮
-        this.visible = ['A', 'B', 'D'].includes(this.currentRoomId);
-      }
+    console.log('电路图按钮组件已挂载');
+    
+    // 监听进入配电室事件，显示按钮
+    EventBus.$on('enterPowerRoom', (roomId) => {
+      console.log('电路图按钮: 收到enterPowerRoom事件, roomId:', roomId);
+      this.visible = true;
+      this.currentRoomId = roomId;
+      this.showCircuit = false; // 重置电路图显示状态
     });
     
-    // 初始化检查当前房间
+    // 监听离开配电室事件，隐藏按钮
+    EventBus.$on('leavePowerRoom', () => {
+      console.log('电路图按钮: 收到leavePowerRoom事件');
+      this.visible = false;
+      this.showCircuit = false;
+      // 隐藏电路图
+      EventBus.$emit('showCircuit', { show: false });
+    });
+    
+    // 初始化检查当前房间状态
     setTimeout(() => {
-      const roomId = window.app ? window.app.activeRoomId || 'A' : 'A';
-      this.currentRoomId = roomId;
-      this.visible = ['A', 'B', 'D'].includes(this.currentRoomId);
+      if (window.app) {
+        const inPowerRoom = (window.app.aRoomModel && window.app.aRoomModel.visible) ||
+                           (window.app.bRoomModel && window.app.bRoomModel.visible) ||
+                           (window.app.dRoomModel && window.app.dRoomModel.visible);
+        this.visible = inPowerRoom;
+      }
     }, 500);
   },
   beforeDestroy() {
     // 移除事件监听
-    EventBus.$off('roomChanged');
+    EventBus.$off('enterPowerRoom');
+    EventBus.$off('leavePowerRoom');
   }
 }
 </script>

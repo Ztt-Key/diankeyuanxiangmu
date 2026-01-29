@@ -32,6 +32,7 @@ import { parkData, cameraUrls } from '@/assets/mock/mock';
 import { loaderParkWater, destroyParkWater } from '@/three/parkWater';
 import { floorBaseMaterial, floorBaseMaterial2 } from '@/three/material';
 import { addGlowEffectToPowerRoom, removeGlowEffectFromPowerRoom } from '@/three/powerRoomEffect';
+import EventBus from '@/bus';
 
 
 export default {
@@ -202,6 +203,10 @@ export default {
 
             // 激活楼层管理功能（不再加载，只是激活）
             loaderFloorManage(window.app);
+            
+            // 触发进入操作仿真事件，显示三个按钮
+            console.log('进入操作仿真模块，触发enterPowerRoom事件');
+            EventBus.$emit('enterPowerRoom', 'simulation');
           },
           backFunction: () => {
             // 移除发光效果
@@ -233,6 +238,10 @@ export default {
               // 移除电线动画并恢复光照
               removeElectricWireAnimation(window.app);
             }
+            
+            // 触发离开操作仿真事件，隐藏三个按钮
+            console.log('退出操作仿真模块，触发leavePowerRoom事件');
+            EventBus.$emit('leavePowerRoom');
           }
         },
         {

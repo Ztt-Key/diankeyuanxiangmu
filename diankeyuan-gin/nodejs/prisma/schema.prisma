@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:123456@127.0.0.1:5432/gva?schema=public"
+}
+
+model ThreeTicketExample {
+  ID            BigInt    @id @default(autoincrement()) @map("id")
+  CreatedAt     DateTime? @map("created_at") @db.Timestamptz(6)
+  UpdatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  DeletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+  value         Json?
+  log           Json?
+  templeId      String?   @map("temple_id")
+  applicantId   BigInt?   @map("applicant_id")
+  applicantName String?   @map("applicant_name")
+
+  @@index([DeletedAt], map: "idx_three_ticket_examples_deleted_at")
+  @@map("three_ticket_examples")
+}
+
+model casbin_rule {
+  id    BigInt  @id @default(autoincrement())
+  ptype String? @db.VarChar(100)
+  v0    String? @db.VarChar(100)
+  v1    String? @db.VarChar(100)
+  v2    String? @db.VarChar(100)
+  v3    String? @db.VarChar(100)
+  v4    String? @db.VarChar(100)
+  v5    String? @db.VarChar(100)
+
+  @@unique([ptype, v0, v1, v2, v3, v4, v5], map: "idx_casbin_rule")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model exa_customers {
+  id                    BigInt    @id @default(autoincrement())
+  created_at            DateTime? @db.Timestamptz(6)
+  updated_at            DateTime? @db.Timestamptz(6)
+  deleted_at            DateTime? @db.Timestamptz(6)
+  customer_name         String?
+  customer_phone_data   String?
+  sys_user_id           BigInt?
+  sys_user_authority_id BigInt?
+
+  @@index([deleted_at], map: "idx_exa_customers_deleted_at")
+}
+
+model exa_file_chunks {
+  id                BigInt    @id @default(autoincrement())
+  created_at        DateTime? @db.Timestamptz(6)
+  updated_at        DateTime? @db.Timestamptz(6)
+  deleted_at        DateTime? @db.Timestamptz(6)
+  exa_file_id       BigInt?
+  file_chunk_number BigInt?
+  file_chunk_path   String?
+
+  @@index([deleted_at], map: "idx_exa_file_chunks_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model exa_file_upload_and_downloads {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  name       String?
+  url        String?
+  tag        String?
+  key        String?
+
+  @@index([deleted_at], map: "idx_exa_file_upload_and_downloads_deleted_at")
+}
+
+model exa_files {
+  id          BigInt    @id @default(autoincrement())
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  file_name   String?
+  file_md5    String?
+  file_path   String?
+  chunk_total BigInt?
+  is_finish   Boolean?
+
+  @@index([deleted_at], map: "idx_exa_files_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model gva_announcements_info {
+  id          BigInt    @id @default(autoincrement())
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  title       String?
+  content     String?
+  user_id     BigInt?
+  attachments Json?
+
+  @@index([deleted_at], map: "idx_gva_announcements_info_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model jwt_blacklists {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  jwt        String?
+
+  @@index([deleted_at], map: "idx_jwt_blacklists_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_apis {
+  id          BigInt    @id @default(autoincrement())
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  path        String?
+  description String?
+  api_group   String?
+  method      String?   @default("POST")
+
+  @@index([deleted_at], map: "idx_sys_apis_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_authorities {
+  created_at     DateTime? @db.Timestamptz(6)
+  updated_at     DateTime? @db.Timestamptz(6)
+  deleted_at     DateTime? @db.Timestamptz(6)
+  authority_id   BigInt    @id(map: "uni_sys_authorities_authority_id") @default(autoincrement())
+  authority_name String?
+  parent_id      BigInt?
+  default_router String?   @default("dashboard")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_authority_btns {
+  authority_id         BigInt?
+  sys_menu_id          BigInt?
+  sys_base_menu_btn_id BigInt?
+
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_authority_menus {
+  sys_base_menu_id           BigInt
+  sys_authority_authority_id BigInt
+
+  @@id([sys_base_menu_id, sys_authority_authority_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_auto_code_histories {
+  id                 BigInt    @id @default(autoincrement())
+  created_at         DateTime? @db.Timestamptz(6)
+  updated_at         DateTime? @db.Timestamptz(6)
+  deleted_at         DateTime? @db.Timestamptz(6)
+  table_name         String?
+  package            String?
+  request            String?
+  struct_name        String?
+  abbreviation       String?
+  business_db        String?
+  description        String?
+  templates          String?
+  Injections         String?
+  flag               BigInt?
+  api_ids            String?
+  menu_id            BigInt?
+  export_template_id BigInt?
+  package_id         BigInt?
+
+  @@index([deleted_at], map: "idx_sys_auto_code_histories_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_auto_code_packages {
+  id           BigInt    @id @default(autoincrement())
+  created_at   DateTime? @db.Timestamptz(6)
+  updated_at   DateTime? @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+  desc         String?
+  label        String?
+  template     String?
+  package_name String?
+  module       String?
+
+  @@index([deleted_at], map: "idx_sys_auto_code_packages_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_base_menu_btns {
+  id               BigInt    @id @default(autoincrement())
+  created_at       DateTime? @db.Timestamptz(6)
+  updated_at       DateTime? @db.Timestamptz(6)
+  deleted_at       DateTime? @db.Timestamptz(6)
+  name             String?
+  desc             String?
+  sys_base_menu_id BigInt?
+
+  @@index([deleted_at], map: "idx_sys_base_menu_btns_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_base_menu_parameters {
+  id               BigInt    @id @default(autoincrement())
+  created_at       DateTime? @db.Timestamptz(6)
+  updated_at       DateTime? @db.Timestamptz(6)
+  deleted_at       DateTime? @db.Timestamptz(6)
+  sys_base_menu_id BigInt?
+  type             String?
+  key              String?
+  value            String?
+
+  @@index([deleted_at], map: "idx_sys_base_menu_parameters_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_base_menus {
+  id           BigInt    @id @default(autoincrement())
+  created_at   DateTime? @db.Timestamptz(6)
+  updated_at   DateTime? @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+  menu_level   BigInt?
+  parent_id    BigInt?
+  path         String?
+  name         String?
+  hidden       Boolean?
+  component    String?
+  sort         BigInt?
+  active_name  String?
+  keep_alive   Boolean?
+  default_menu Boolean?
+  title        String?
+  icon         String?
+  close_tab    Boolean?
+
+  @@index([deleted_at], map: "idx_sys_base_menus_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_data_authority_id {
+  sys_authority_authority_id     BigInt
+  data_authority_id_authority_id BigInt
+
+  @@id([sys_authority_authority_id, data_authority_id_authority_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_dictionaries {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  name       String?
+  type       String?
+  status     Boolean?
+  desc       String?
+
+  @@index([deleted_at], map: "idx_sys_dictionaries_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_dictionary_details {
+  id                BigInt    @id @default(autoincrement())
+  created_at        DateTime? @db.Timestamptz(6)
+  updated_at        DateTime? @db.Timestamptz(6)
+  deleted_at        DateTime? @db.Timestamptz(6)
+  label             String?
+  value             String?
+  extend            String?
+  status            Boolean?
+  sort              BigInt?
+  sys_dictionary_id BigInt?
+
+  @@index([deleted_at], map: "idx_sys_dictionary_details_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_export_template_condition {
+  id          BigInt    @id @default(autoincrement())
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  template_id String?
+  from        String?
+  column      String?
+  operator    String?
+
+  @@index([deleted_at], map: "idx_sys_export_template_condition_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_export_template_join {
+  id          BigInt    @id @default(autoincrement())
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  template_id String?
+  joins       String?
+  table       String?
+  on          String?
+
+  @@index([deleted_at], map: "idx_sys_export_template_join_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_export_templates {
+  id            BigInt    @id @default(autoincrement())
+  created_at    DateTime? @db.Timestamptz(6)
+  updated_at    DateTime? @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)
+  db_name       String?
+  name          String?
+  table_name    String?
+  template_id   String?
+  template_info String?
+  limit         BigInt?
+  order         String?
+
+  @@index([deleted_at], map: "idx_sys_export_templates_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_ignore_apis {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  path       String?
+  method     String?   @default("POST")
+
+  @@index([deleted_at], map: "idx_sys_ignore_apis_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_operation_records {
+  id            BigInt    @id @default(autoincrement())
+  created_at    DateTime? @db.Timestamptz(6)
+  updated_at    DateTime? @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)
+  ip            String?
+  method        String?
+  path          String?
+  status        BigInt?
+  latency       BigInt?
+  agent         String?
+  error_message String?
+  body          String?
+  resp          String?
+  user_id       BigInt?
+
+  @@index([deleted_at], map: "idx_sys_operation_records_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_params {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  name       String?
+  key        String?
+  value      String?
+  desc       String?
+
+  @@index([deleted_at], map: "idx_sys_params_deleted_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_user_authority {
+  sys_user_id                BigInt
+  sys_authority_authority_id BigInt
+
+  @@id([sys_user_id, sys_authority_authority_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sys_users {
+  id             BigInt    @id @default(autoincrement())
+  created_at     DateTime? @db.Timestamptz(6)
+  updated_at     DateTime? @db.Timestamptz(6)
+  deleted_at     DateTime? @db.Timestamptz(6)
+  uuid           String?
+  username       String?
+  password       String?
+  nick_name      String?   @default("系统用户")
+  header_img     String?   @default("https://qmplusimg.henrongyi.top/gva_header.jpg")
+  authority_id   BigInt?   @default(888)
+  phone          String?
+  email          String?
+  enable         BigInt?   @default(1)
+  origin_setting String?
+
+  @@index([deleted_at], map: "idx_sys_users_deleted_at")
+  @@index([username], map: "idx_sys_users_username")
+  @@index([uuid], map: "idx_sys_users_uuid")
+}
+
+model three_tucjet_template {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  name       String?
+  value      Json?
+
+  @@index([deleted_at], map: "idx_three_tucjet_template_deleted_at")
+}
+
+model energySavingDay {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  name       String?
+  hr         BigInt?
+  flag       BigInt?
+  data       Decimal?  @db.Decimal
+  described  String?
+
+  @@index([deleted_at], map: "idx_energySavingDay_deleted_at")
+}
+
+model energySavingReal {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  name       String?
+  hm         BigInt?
+  flag       BigInt?
+  data       Decimal?  @db.Decimal
+  described  String?
+
+  @@index([deleted_at], map: "idx_energySavingReal_deleted_at")
+}
+
+model energySavingSubscription {
+  id           BigInt    @id @default(autoincrement())
+  created_at   DateTime? @db.Timestamptz(6)
+  updated_at   DateTime? @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+  name         String?
+  described    String?
+  subscription Boolean?
+
+  @@index([deleted_at], map: "idx_energySavingSubscription_deleted_at")
+}
+
+model three_ticket_signature {
+  id         BigInt    @id @default(autoincrement())
+  created_at DateTime? @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  user_id    String?
+  img_url    String?
+  pass_word  String?
+  info       Json?
+
+  @@index([deleted_at], map: "idx_three_ticket_signature_deleted_at")
+}

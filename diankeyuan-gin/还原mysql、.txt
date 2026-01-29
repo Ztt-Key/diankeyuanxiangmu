@@ -1,0 +1,13 @@
+# 0. 创建MySQL容器
+# Start of Selection
+docker run -d --name diankeyuan-mysql -e MYSQL_ROOT_PASSWORD=KE_MYSQL_123456 -e MYSQL_DATABASE=emsdata -p 3306:3306 -v mysql_data:/var /lib/mysql mysql:5.7
+# End of Selection
+
+# 等待MySQL容器启动完成
+sleep 10
+
+# 1. 先创建数据库
+docker exec -it diankeyuan-mysql mysql -u root -pKE_MYSQL_123456 -e "CREATE DATABASE IF NOT EXISTS emsdata;"
+
+# 2. 还原数据
+docker exec -i diankeyuan-mysql mysql -u root -pKE_MYSQL_123456 emsdata < emsdata_backup.sql

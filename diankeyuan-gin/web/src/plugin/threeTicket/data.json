@@ -1,0 +1,246 @@
+
+ [
+    {
+      "name": "初始化",
+      "type": "input",
+      "index": 0,
+      "value": [
+        {
+          "name": "工作负责人",
+          "type": "input",
+          "index": 1,
+          "value": "",
+          "required": true,
+          "placeholder": "请输入工作负责人姓名"
+        },
+        {
+          "name": "工作班人员",
+          "type": "input-list",
+          "index": 3,
+          "value": "",
+          "required": true,
+          "placeholder": "请输入工作班人员姓名(不包括工作负责人)"
+        },
+        {
+          "name": "审核主管",
+          "type": "auditor",
+          "index": 10,
+          "value": "",
+          "required": true,
+          "placeholder": "请选择审核主管"
+        },
+        {
+          "name": "工作的变配电站名称及设备双重名称",
+          "type": "input",
+          "index": 4,
+          "value": "",
+          "required": true,
+          "placeholder": "请输入变配电站名称及设备名称"
+        },
+        {
+          "name": "工作任务",
+          "type": "table",
+          "index": 5,
+          "value": [],
+          "columns": [
+            {
+              "key": "location",
+              "type": "input",
+              "title": "工作地点或地段"
+            },
+            {
+              "key": "content",
+              "type": "input",
+              "title": "工作内容"
+            }
+          ],
+          "required": true
+        },
+        {
+          "name": "计划工作时间",
+          "type": "dateTimeRange",
+          "index": 6,
+          "value": {
+            "end": "",
+            "start": ""
+          },
+          "required": true
+        },
+        {
+          "name": "工作条件",
+          "type": "textarea",
+          "index": 7,
+          "value": "",
+          "required": true,
+          "placeholder": "停电或不停电,或邻近及保留带电设备名称"
+        },
+        {
+          "name": "注意事项",
+          "type": "textarea",
+          "index": 8,
+          "value": "",
+          "required": true,
+          "placeholder": "安全措施"
+        },
+        {
+          "name": "补充安全措施",
+          "type": "textarea",
+          "index": 9,
+          "value": "",
+          "required": true,
+          "placeholder": "工作许可人填写"
+        },
+        {
+          "name": "工作票签发人签名",
+          "type": "signature",
+          "index": 11,
+          "value": "",
+          "required": true,
+          "placeholder": "请签名"
+        }
+      ],
+      "next_step": 1,
+      "reject_step": 0
+    },
+    {
+      "name": "审核",
+      "type": "audit",
+      "index": 1,
+      "value": [
+        {
+          "name": "审核意见",
+          "type": "textarea",
+          "index": 0,
+          "value": "",
+          "required": true,
+          "placeholder": "请输入审核意见"
+        },
+        {
+          "name": "审核人签名",
+          "type": "signature",
+          "index": 1,
+          "value": "",
+          "required": true,
+          "placeholder": "请签名"
+        }
+      ],
+      "no_index": 0,
+      "next_step": 2,
+      "reject_step": 0
+    },
+    {
+      "name": "工作执行",
+      "type": "input",
+      "index": 2,
+      "value": [
+        {
+          "name": "每日工作记录",
+          "type": "table",
+          "index": 0,
+          "value": [],
+          "columns": [
+            {
+              "key": "date",
+              "type": "date",
+              "title": "日期"
+            },
+            {
+              "key": "startTime",
+              "type": "time",
+              "title": "开始时间"
+            },
+            {
+              "key": "endTime",
+              "type": "time",
+              "title": "结束时间"
+            },
+            {
+              "key": "content",
+              "type": "textarea",
+              "title": "工作内容"
+            },
+            {
+              "key": "responsiblePersonSign",
+              "type": "signature",
+              "title": "工作负责人签名"
+            }
+          ],
+          "required": true
+        }
+      ],
+      "actions": [
+        {
+          "name": "延期申请",
+          "type": "extension",
+          "next_step": 3,
+          "requireSignature": true
+        },
+        {
+          "name": "变更负责人",
+          "type": "change_responsible",
+          "value": [
+            {
+              "name": "变更原因",
+              "type": "textarea",
+              "required": true
+            },
+            {
+              "name": "申请人签名",
+              "type": "signature",
+              "required": true,
+              "placeholder": "请签名"
+            }
+          ],
+          "next_step": 4
+        },
+        {
+          "name": "工作完成",
+          "type": "complete",
+          "value": [
+            {
+              "name": "完工确认",
+              "type": "textarea",
+              "required": true,
+              "placeholder": "请确认工作完成情况及全部撤离、材料工具已清理完毕"
+            },
+            {
+              "name": "完工签名",
+              "type": "signature",
+              "required": true,
+              "placeholder": "请签名"
+            }
+          ],
+          "next_step": 6
+        }
+      ],
+      "allowSave": true,
+      "next_step": 6,
+      "reject_step": 1
+    },
+    {
+      "name": "终结审核",
+      "type": "audit",
+      "index": 6,
+      "value": [
+        {
+          "name": "终结审核意见",
+          "type": "textarea",
+          "index": 0,
+          "value": "",
+          "required": true,
+          "placeholder": "请输入终结审核意见"
+        },
+        {
+          "name": "终结审核签名",
+          "type": "signature",
+          "index": 1,
+          "value": "",
+          "required": true,
+          "placeholder": "请签名"
+        }
+      ],
+      "no_index": 2,
+      "next_step": 7,
+      "reject_step": 2
+    }
+  ]

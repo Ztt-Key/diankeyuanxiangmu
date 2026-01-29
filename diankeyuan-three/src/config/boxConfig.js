@@ -907,6 +907,58 @@ export const roomB = [
             },
         ]
     },
+    {
+        id: '2AL',
+        triggerModel: '立方体321',
+        equipmentList: [
+            {
+                id: '2AL-1',
+                title: '2AL总开关',
+                video: '/model-img/boxC.mkv'
+            },
+            {
+                id: '2AL-2',
+                title: '出线一',
+                video: '/model-img/box.mp4'
+            },
+            {
+                id: '2AL-3',
+                title: '出线二',
+                video: '/model-img/box.mp4'
+            },
+            {
+                id: '2AL-4',
+                title: '备用',
+                video: '/model-img/box.mp4'
+            },
+        ]
+    },
+    {
+        id: '1AL',
+        triggerModel: '立方体327',
+        equipmentList: [
+            {
+                id: '1AL-1',
+                title: '1AL总开关',
+                video: '/model-img/boxC.mkv'
+            },
+            {
+                id: '1AL-2',
+                title: '出线一',
+                video: '/model-img/box.mp4'
+            },
+            {
+                id: '1AL-3',
+                title: '出线二',
+                video: '/model-img/box.mp4'
+            },
+            {
+                id: '1AL-4',
+                title: '备用',
+                video: '/model-img/box.mp4'
+            },
+        ]
+    },
     //高压
     {
         id: 'AH5',

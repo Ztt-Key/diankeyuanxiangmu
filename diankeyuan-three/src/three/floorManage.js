@@ -1090,6 +1090,33 @@ function showBRoomModel(app) {
     });
 
     console.log('B座模型已显示');
+    
+    // 调试：输出B座模型中Y:22附近（电气柜顶部）的所有模型
+    console.log('=== B座电气柜顶部模型（Y:20-24，按X坐标从左到右排序） ===');
+    const topModels = [];
+    app.bRoomModel.traverse((obj) => {
+      if (obj.name && obj.name.startsWith('立方体')) {
+        const pos = new THREE.Vector3();
+        obj.getWorldPosition(pos);
+        // 只筛选Y在20-24之间的模型（电气柜顶部高度）
+        if (pos.y >= 20 && pos.y <= 24) {
+          topModels.push({
+            name: obj.name,
+            x: pos.x,
+            y: pos.y,
+            z: pos.z
+          });
+        }
+      }
+    });
+    // 按X坐标排序（从左到右）
+    topModels.sort((a, b) => a.x - b.x);
+    console.log('现有配置: 3AL=立方体271(X:-27), 4AL=立方体224(X:-16.77), 6AL=立方体206(X:-6.40)');
+    console.log('所有Y:20-24的电气柜顶部模型（从左到右）：');
+    topModels.forEach((m, i) => {
+      console.log(`${i+1}. ${m.name} - X:${m.x.toFixed(2)}, Y:${m.y.toFixed(2)}`);
+    });
+    console.log('=== 调试输出结束 ===');
   } else {
     console.warn('B座模型未加载');
   }

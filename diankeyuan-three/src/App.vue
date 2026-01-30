@@ -44,4 +44,13 @@
   .dg.ac {
     z-index: 9999 !important;
   }
+
+  // lil-gui 控制面板移到左上角
+  .lil-gui {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    z-index: 9999 !important;
+  }
 </style>

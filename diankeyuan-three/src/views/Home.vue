@@ -13,6 +13,7 @@
       <circuit-button></circuit-button>
       <training-button></training-button>
       <reset-view-button></reset-view-button>
+      <help-guide></help-guide>
       <circuit></circuit>
       <circuit-training></circuit-training>
     </div>
@@ -43,6 +44,7 @@ import trainingButton from '@/components/trainingButton.vue';
 import circuit from '@/components/circuit.vue';
 import circuitTraining from '@/components/circuitTraining.vue';
 import resetViewButton from '@/components/resetViewButton.vue';
+import helpGuide from '@/components/helpGuide.vue';
 
 let app,
   camera,
@@ -68,7 +70,8 @@ export default {
     trainingButton,
     circuit,
     circuitTraining,
-    resetViewButton
+    resetViewButton,
+    helpGuide
   },
   data() {
     return {

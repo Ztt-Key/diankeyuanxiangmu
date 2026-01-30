@@ -314,6 +314,26 @@ export const roomA = [
                 title: '母联柜',
                 video: '/model-img/boxC.mkv'
             }, 
+            {
+                id: '16AL11-1',
+                title: '母联柜',
+                video: '/model-img/box.mp4'
+            }, 
+            {
+                id: '16AL11-1',
+                title: '母联柜',
+                 video: '/model-img/box.mp4'
+            }, 
+            {
+                id: '16AL11-1',
+                title: '母联柜',
+                video: '/model-img/box.mp4'
+            }, 
+            {
+                id: '16AL11-1',
+                title: '母联柜',
+                video: '/model-img/box.mp4'
+            }, 
         ]
     },
     {

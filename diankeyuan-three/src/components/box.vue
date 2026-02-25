@@ -6,7 +6,14 @@
         <div class="box-background"></div>
         <div class="box-content">
             <div v-for="(equipment, index) in currentConfig.equipmentList" :key="equipment.id" class="video-container" :class="{'error': loadingStatus.errors[index]}">
-                <h3>{{ equipment.title }}</h3>
+                <div class="cabinet-header">
+                    <div class="power-badge">
+                        电量：{{ getMockPowerLevel(equipment, index) }}%
+                    </div>
+                    <h3>{{ equipment.title }}</h3>
+                </div>
+                <!-- 开关状态UI暂时隐藏，仅在内部逻辑中使用设备状态，不在界面展示 -->
+
                 <div v-if="loadingStatus.errors[index]" class="error-message">
                     <span>加载失败</span>
                     <button @click="reloadVideo(index)">重试</button>
@@ -56,15 +63,20 @@ export default {
             reversePlayIntervals: [],
             lastFrameTime: 0,
             frameInterval: 1000 / 30, // 30fps
+
             // 修改媒体资源缓存结构，添加设备ID前缀
             mediaCache: {
                 videos: {},
                 images: {}
             },
+
             // 新增：设备ID映射表
             equipmentIdMap: {},
             // 新增：当前正在显示的设备ID
             currentEquipmentIds: [],
+            // 新增：当前设备的开关状态映射表（true: 合闸，false: 分闸）
+            equipmentStatusMap: {},
+
             // 新增：存储视频元素引用
             videoElements: {},
             // 新增：加载状态跟踪
@@ -75,7 +87,10 @@ export default {
             // 培训模式相关
             isTrainingMode: false,
             highlightedEquipments: [],
-            trainingErrors: []
+            trainingErrors: [],
+
+            // 新增：模拟电量缓存，避免每次渲染都变动
+            powerLevelMap: {}
         };
     },
     methods: {
@@ -492,6 +507,25 @@ export default {
             // 直接返回原始URL，让浏览器先加载
             return url;
         },
+        // 新增：获取模拟电量（百分比），对同一设备保持稳定
+        getMockPowerLevel(equipment, index) {
+            if (!equipment) return 0;
+
+            const key = equipment.id || `${this.currentConfig && this.currentConfig.id || 'unknown'}-${index}`;
+
+            if (this.powerLevelMap[key] !== undefined) {
+                return this.powerLevelMap[key];
+            }
+
+            // 基于 key 生成一个稳定的伪随机数 60-100
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) {
+                hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+            }
+            const level = 60 + (hash % 41); // 60-100
+            this.powerLevelMap[key] = level;
+            return level;
+        },
         // 新增：生成设备ID映射表
         generateEquipmentIdMap(config) {
             if (!config || !config.equipmentList) return;
@@ -725,6 +759,9 @@ export default {
                         if (deviceStatus !== undefined && deviceStatus !== null) {
                             console.log(`应用设备 ${equipment.id} - ${equipment.title} 的状态: ${deviceStatus ? '接通' : '断开'}`);
                             
+                            // 同步到状态映射表，用于界面展示
+                            this.$set(this.equipmentStatusMap, equipment.id, !!deviceStatus);
+
                             // 存储设备状态，无论视频是否已加载
                             equipment.pendingStatus = deviceStatus;
                             
@@ -892,7 +929,7 @@ export default {
             
             // 5. 记录查找结果
             if (index === -1) {
-                console.warn(`未找到设备: ${equipmentId}，尝试的匹配方法: 精确匹配ID、匹配标题、特殊匹配电容柜、特殊匹配主电源`);
+                console.warn(`未找到设备: ${equipmentId}`);
             } else {
                 console.log(`找到设备: ${equipmentId} -> ${this.currentConfig.equipmentList[index].id}, ${this.currentConfig.equipmentList[index].title}`);
             }
@@ -961,10 +998,10 @@ export default {
                     container.classList.remove('highlighted');
                     container.classList.remove('training-error');
                 });
+                
+                // 移除渲染任务
+                this.$EventBus.$emit('removeRenderTask', 'boxHighlight');
             });
-            
-            // 移除渲染任务
-            this.$EventBus.$emit('removeRenderTask', 'boxHighlight');
         },
         // 处理设备操作
         handleDeviceOperation(data) {
@@ -1037,6 +1074,8 @@ export default {
             if (data.show && data.config) {
                 this.currentConfig = data.config;
                 this.loadMedia();
+                // 打开面板时同步一次电路图中的设备状态
+                this.syncWithCircuitStatus();
             }
             
             if (data.show) {
@@ -1158,7 +1197,7 @@ export default {
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: calc(100% - 60px);
+        height: calc(100% - 80px);
         padding: 20px;
         box-sizing: border-box;
         overflow-y: auto;
@@ -1191,12 +1230,46 @@ export default {
     }
 
     .video-container {
-        margin-bottom: 0;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        margin-bottom: 20px;
+        padding: 10px 10px 10px 10px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
         position: relative;
+        color: #fff;
+
+        .cabinet-header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 2;
+
+            h3 {
+                margin: 0 0 0 8px;
+                font-size: 16px;
+                font-weight: 500;
+            }
+        }
+
+        .power-badge {
+            min-width: 80px;
+            padding: 2px 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #00ffcc;
+            background: rgba(0, 0, 0, 0.75);
+            border: 1px solid rgba(0, 255, 204, 0.8);
+            border-radius: 12px;
+            box-shadow: 0 0 8px rgba(0, 255, 204, 0.6);
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 3;
+            pointer-events: none;
+        }
 
         &:first-child .box-video,
         &:first-child .box-video-b,

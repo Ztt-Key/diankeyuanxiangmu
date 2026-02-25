@@ -8,7 +8,7 @@
             <div v-for="(equipment, index) in currentConfig.equipmentList" :key="equipment.id" class="video-container" :class="{'error': loadingStatus.errors[index]}">
                 <div class="cabinet-header">
                     <div class="power-badge">
-                        电量：{{ getMockPowerLevel(equipment, index) }}%
+                        电力值：{{ getMockPowerLevel(equipment, index) }} kW
                     </div>
                     <h3>{{ equipment.title }}</h3>
                 </div>
@@ -137,6 +137,14 @@ export default {
                                 title: equipment.title,
                                 status: false
                             });
+
+                            // 新增：同步3D柜子按钮状态（断开）
+                            EventBus.$emit('cabinetDeviceStateChange', {
+                                cabinetId: this.currentConfig && this.currentConfig.id,
+                                deviceId: equipment.id,
+                                title: equipment.title,
+                                status: false
+                            });
                         }
                     }
                 } else {
@@ -154,6 +162,14 @@ export default {
                             
                             // 新增：同步高亮线路图中对应节点
                             EventBus.$emit('highlightCircuitNode', {
+                                deviceId: equipment.id,
+                                title: equipment.title,
+                                status: true
+                            });
+
+                            // 新增：同步3D柜子按钮状态（接通）
+                            EventBus.$emit('cabinetDeviceStateChange', {
+                                cabinetId: this.currentConfig && this.currentConfig.id,
                                 deviceId: equipment.id,
                                 title: equipment.title,
                                 status: true
@@ -217,17 +233,28 @@ export default {
                     if (playPromise !== undefined) {
                         playPromise
                             .then(() => {
-                                this.videos[index].isPlaying = true;
+                                if (!this.videos[index]) {
+                                    this.$set(this.videos, index, {
+                                        isPlaying: true,
+                                        videoReady: false
+                                    });
+                                } else {
+                                    this.videos[index].isPlaying = true;
+                                }
                                 console.log(`视频 ${index} 开始播放`);
                             })
                             .catch(err => {
                                 console.error('播放视频时出错:', err);
-                                this.videos[index].isPlaying = false;
+                                if (this.videos[index]) {
+                                    this.videos[index].isPlaying = false;
+                                }
                             });
                     }
                 } catch (e) {
                     console.error('尝试播放视频时出错:', e);
-                    this.videos[index].isPlaying = false;
+                    if (this.videos[index]) {
+                        this.videos[index].isPlaying = false;
+                    }
                 }
             }
         },
@@ -316,6 +343,12 @@ export default {
             
             // 存储当前显示的设备ID
             this.currentEquipmentIds = config.equipmentList.map(eq => eq.id);
+
+            // 新增：根据设备数量初始化视频状态数组，避免 this.videos[index] 为 undefined
+            this.videos = config.equipmentList.map(() => ({
+                isPlaying: false,
+                videoReady: false
+            }));
             
             console.log('开始预加载媒体资源...');
 

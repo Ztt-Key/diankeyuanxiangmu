@@ -266,9 +266,16 @@ function findCabinetConfigByModel(clickedObject, roomModel, roomConfig) {
   // 获取点击对象的名称
   let objectName = clickedObject.name;
   
+  // 名称匹配辅助：兼容 "立方体387"(config) 和 "立方体.387"(model) 的差异
+  function nameMatches(configName, modelName) {
+    if (configName === modelName) return true;
+    const withDot = configName.replace(/([^\d.])(\d)/, '$1.$2');
+    return withDot === modelName;
+  }
+
   // 首先检查点击的对象是否直接是 triggerModel
   for (const config of roomConfig) {
-    if (config.triggerModel === objectName) {
+    if (nameMatches(config.triggerModel, objectName)) {
       return config;
     }
   }
@@ -278,7 +285,7 @@ function findCabinetConfigByModel(clickedObject, roomModel, roomConfig) {
   let parent = clickedObject.parent;
   while (parent && parent !== roomModel) {
     for (const config of roomConfig) {
-      if (config.triggerModel === parent.name) {
+      if (nameMatches(config.triggerModel, parent.name)) {
         return config;
       }
     }
@@ -331,7 +338,16 @@ function findCabinetConfigByModel(clickedObject, roomModel, roomConfig) {
 function findAllCabinetModels(triggerModelName, roomModel) {
   const cabinetModels = [];
   
-  const triggerModel = roomModel.getObjectByName(triggerModelName);
+  // 兼容配置中 "立方体387" 和模型中 "立方体.387" 的命名差异
+  let triggerModel = roomModel.getObjectByName(triggerModelName);
+  if (!triggerModel) {
+    // 尝试在中文和数字之间插入点号: 立方体387 → 立方体.387
+    const nameWithDot = triggerModelName.replace(/([^\d.])(\d)/, '$1.$2');
+    triggerModel = roomModel.getObjectByName(nameWithDot);
+    if (triggerModel) {
+      console.log(`名称修正: ${triggerModelName} → ${nameWithDot}`);
+    }
+  }
   if (!triggerModel) {
     console.warn('未找到触发模型:', triggerModelName);
     return cabinetModels;
@@ -339,13 +355,37 @@ function findAllCabinetModels(triggerModelName, roomModel) {
   
   // 获取triggerModel的世界空间边界盒
   const triggerBox = new THREE.Box3().setFromObject(triggerModel);
+  const triggerCenter = new THREE.Vector3();
+  triggerBox.getCenter(triggerCenter);
 
-  // X/Z 方向使用 triggerModel 的实际边界（不放大），防止搜到相邻柜子
-  // 只留极小容差（0.2 个单位）应对浮点误差
-  const xTolerance = 0.2;
-  const zTolerance = 0.2;
-  const searchMinX = triggerBox.min.x - xTolerance;
-  const searchMaxX = triggerBox.max.x + xTolerance;
+  // 计算到最近邻柜子的距离，以此确定安全的X搜索半径
+  const allConfigs = [...roomA, ...roomB, ...roomD];
+  let minNeighborDist = Infinity;
+  for (const cfg of allConfigs) {
+    if (cfg.triggerModel === triggerModelName) continue;
+    // 兼容点号命名
+    let neighborName = cfg.triggerModel;
+    let neighbor = roomModel.getObjectByName(neighborName);
+    if (!neighbor) {
+      neighborName = neighborName.replace(/([^\d.])(\d)/, '$1.$2');
+      neighbor = roomModel.getObjectByName(neighborName);
+    }
+    if (!neighbor) continue;
+    const nPos = new THREE.Vector3();
+    neighbor.getWorldPosition(nPos);
+    const dist = Math.abs(nPos.x - triggerCenter.x);
+    if (dist > 0.1 && dist < minNeighborDist) {
+      minNeighborDist = dist;
+    }
+  }
+  // 搜索半径：到最近邻居距离的45%（安全范围，不会搜到邻居）
+  const safeHalfX = minNeighborDist < Infinity ? minNeighborDist * 0.45 : (triggerBox.max.x - triggerBox.min.x) * 0.8;
+
+  const searchMinX = triggerCenter.x - safeHalfX;
+  const searchMaxX = triggerCenter.x + safeHalfX;
+  // Z方向用面板边界 + 合理容差
+  const cabinetDepth = triggerBox.max.z - triggerBox.min.z;
+  const zTolerance = Math.max(cabinetDepth * 0.5, 1);
   const searchMinZ = triggerBox.min.z - zTolerance;
   const searchMaxZ = triggerBox.max.z + zTolerance;
 
@@ -354,7 +394,7 @@ function findAllCabinetModels(triggerModelName, roomModel) {
   const searchHeightDown = 80;
   const searchHeightUp = 5;
 
-  console.log(`搜索柜子 ${triggerModelName}，X=[${searchMinX.toFixed(2)}, ${searchMaxX.toFixed(2)}], Z=[${searchMinZ.toFixed(2)}, ${searchMaxZ.toFixed(2)}]`);
+  console.log(`搜索柜子 ${triggerModelName}，X=[${searchMinX.toFixed(2)}, ${searchMaxX.toFixed(2)}], Z=[${searchMinZ.toFixed(2)}, ${searchMaxZ.toFixed(2)}], 邻居距离=${minNeighborDist.toFixed(2)}`);
 
   roomModel.traverse((obj) => {
     if (!obj.isMesh) return;
@@ -364,7 +404,6 @@ function findAllCabinetModels(triggerModelName, roomModel) {
 
     const dy = cabinetTopY - objCenter.y;
 
-    // mesh 中心必须严格落在 triggerModel 的 X/Z 边界内
     if (
       objCenter.x >= searchMinX && objCenter.x <= searchMaxX &&
       objCenter.z >= searchMinZ && objCenter.z <= searchMaxZ &&

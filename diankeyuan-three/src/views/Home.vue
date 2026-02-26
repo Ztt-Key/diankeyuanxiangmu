@@ -45,6 +45,7 @@ import circuit from '@/components/circuit.vue';
 import circuitTraining from '@/components/circuitTraining.vue';
 import resetViewButton from '@/components/resetViewButton.vue';
 import helpGuide from '@/components/helpGuide.vue';
+import { createSceneDecorations } from '@/three/sceneDecorations';
 
 let app,
   camera,
@@ -112,6 +113,7 @@ export default {
       reprocessing = createReprocessing(app);
 
       await loaderModel(app);
+      createSceneDecorations(app);
 
       let instance = new cssRender(CSS3DRenderer, app);
       app.cssRenderer = instance.cssRenderer;

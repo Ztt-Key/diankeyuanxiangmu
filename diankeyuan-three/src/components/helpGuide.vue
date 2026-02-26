@@ -27,6 +27,12 @@
               </div>
               <div class="guide-item">
                 <div class="key-combo">
+                  <span class="key">柜子动效</span>
+                </div>
+                <div class="description">红色表示关闭，绿色表示开启</div>
+              </div>
+              <div class="guide-item">
+                <div class="key-combo">
                   <span class="key">鼠标左键</span>
                   <span class="plus">+</span>
                   <span class="key">拖动</span>

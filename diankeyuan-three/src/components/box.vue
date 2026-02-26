@@ -8,7 +8,7 @@
             <div v-for="(equipment, index) in currentConfig.equipmentList" :key="equipment.id" class="video-container" :class="{'error': loadingStatus.errors[index]}">
                 <div class="cabinet-header">
                     <div class="power-badge">
-                        电力值：{{ getMockPowerLevel(equipment, index) }} kW
+                        功率值：{{ getMockPowerLevel(equipment, index) }} kW
                     </div>
                     <h3>{{ equipment.title }}</h3>
                 </div>
@@ -138,10 +138,12 @@ export default {
                                 status: false
                             });
 
-                            // 新增：同步3D柜子按钮状态（断开）
+                            // 同步3D柜子按钮状态（断开）
                             EventBus.$emit('cabinetDeviceStateChange', {
                                 cabinetId: this.currentConfig && this.currentConfig.id,
                                 deviceId: equipment.id,
+                                equipmentIndex: index,
+                                equipmentTotal: this.currentConfig.equipmentList.length,
                                 title: equipment.title,
                                 status: false
                             });
@@ -167,10 +169,12 @@ export default {
                                 status: true
                             });
 
-                            // 新增：同步3D柜子按钮状态（接通）
+                            // 同步3D柜子按钮状态（接通）
                             EventBus.$emit('cabinetDeviceStateChange', {
                                 cabinetId: this.currentConfig && this.currentConfig.id,
                                 deviceId: equipment.id,
+                                equipmentIndex: index,
+                                equipmentTotal: this.currentConfig.equipmentList.length,
                                 title: equipment.title,
                                 status: true
                             });

@@ -46,6 +46,9 @@ function initModelMaps() {
   console.log('模型映射表已初始化');
 }
 
+// 存储设备开关闪烁动画ID
+let switchAnimationFrameId = null;
+
 // 初始化事件监听器（用于响应复原按钮等操作）
 function initEventListeners() {
   // 监听清除柜子高亮事件
@@ -53,6 +56,14 @@ function initEventListeners() {
   EventBus.$on('clearCabinetHighlight', () => {
     console.log('收到清除柜子高亮事件');
     clearCabinetHighlight(window.app);
+  });
+
+  // 监听设备开关状态变更 → 3D模型对应子格联动闪烁
+  EventBus.$off('cabinetDeviceStateChange');
+  EventBus.$on('cabinetDeviceStateChange', (data) => {
+    const { cabinetId, equipmentIndex, equipmentTotal, status } = data;
+    console.log(`3D联动: 柜${cabinetId} 第${equipmentIndex + 1}/${equipmentTotal}格 → ${status ? '合闸(绿)' : '分闸(红)'}`);
+    applySwitchEffect(cabinetId, equipmentIndex, equipmentTotal, status);
   });
 }
 
@@ -326,53 +337,64 @@ function findAllCabinetModels(triggerModelName, roomModel) {
     return cabinetModels;
   }
   
-  // 获取triggerModel的边界盒
+  // 获取triggerModel的世界空间边界盒
   const triggerBox = new THREE.Box3().setFromObject(triggerModel);
-  const triggerCenter = new THREE.Vector3();
-  triggerBox.getCenter(triggerCenter);
-  
-  // 柜子尺寸
-  const cabinetWidth = triggerBox.max.x - triggerBox.min.x;
-  const cabinetDepth = triggerBox.max.z - triggerBox.min.z;
-  
-  // 使用边界盒的中心X和Z坐标，以及底部Y坐标作为柜子的水平位置参考
-  const cabinetCenterX = triggerCenter.x;
-  const cabinetCenterZ = triggerCenter.z;
+
+  // X/Z 方向使用 triggerModel 的实际边界（不放大），防止搜到相邻柜子
+  // 只留极小容差（0.2 个单位）应对浮点误差
+  const xTolerance = 0.2;
+  const zTolerance = 0.2;
+  const searchMinX = triggerBox.min.x - xTolerance;
+  const searchMaxX = triggerBox.max.x + xTolerance;
+  const searchMinZ = triggerBox.min.z - zTolerance;
+  const searchMaxZ = triggerBox.max.z + zTolerance;
+
+  // Y 方向：从 triggerModel 顶部向下搜索整个柜体高度
   const cabinetTopY = triggerBox.max.y;
-  
-  // 搜索半径：基于柜子尺寸，水平方向（稍微放宽）
-  const searchRadiusX = Math.max(cabinetWidth * 0.8, 3);
-  const searchRadiusZ = Math.max(cabinetDepth * 0.8, 3);
-  
-  // 垂直搜索范围：从柜子顶部向下搜索（柜子高度约50-80个单位）
-  const searchHeightDown = 80; // 向下搜索范围
-  const searchHeightUp = 5;    // 向上搜索范围（允许一些误差）
-  
-  console.log(`搜索柜子 ${triggerModelName}，中心位置: (${cabinetCenterX.toFixed(2)}, ${cabinetTopY.toFixed(2)}, ${cabinetCenterZ.toFixed(2)})`);
-  console.log(`搜索范围: X±${searchRadiusX.toFixed(2)}, Z±${searchRadiusZ.toFixed(2)}, Y向下${searchHeightDown}`);
-  
-  // 遍历房间模型中的所有mesh，找到与triggerModel位置接近的模型
+  const searchHeightDown = 80;
+  const searchHeightUp = 5;
+
+  console.log(`搜索柜子 ${triggerModelName}，X=[${searchMinX.toFixed(2)}, ${searchMaxX.toFixed(2)}], Z=[${searchMinZ.toFixed(2)}, ${searchMaxZ.toFixed(2)}]`);
+
   roomModel.traverse((obj) => {
-    if (obj.isMesh) {
-      // 获取对象的边界盒中心
-      const objBox = new THREE.Box3().setFromObject(obj);
-      const objCenter = new THREE.Vector3();
-      objBox.getCenter(objCenter);
-      
-      // 计算水平距离（相对于柜子中心）
-      const dx = Math.abs(objCenter.x - cabinetCenterX);
-      const dz = Math.abs(objCenter.z - cabinetCenterZ);
-      
-      // 垂直距离：对象中心相对于柜子顶部的距离
-      const dy = cabinetTopY - objCenter.y;
-      
-      // 如果在柜子的水平范围内，且在合理的垂直范围内
-      if (dx <= searchRadiusX && dz <= searchRadiusZ && dy >= -searchHeightUp && dy <= searchHeightDown) {
-        cabinetModels.push(obj);
-      }
+    if (!obj.isMesh) return;
+    const objBox = new THREE.Box3().setFromObject(obj);
+    const objCenter = new THREE.Vector3();
+    objBox.getCenter(objCenter);
+
+    const dy = cabinetTopY - objCenter.y;
+
+    // mesh 中心必须严格落在 triggerModel 的 X/Z 边界内
+    if (
+      objCenter.x >= searchMinX && objCenter.x <= searchMaxX &&
+      objCenter.z >= searchMinZ && objCenter.z <= searchMaxZ &&
+      dy >= -searchHeightUp && dy <= searchHeightDown
+    ) {
+      cabinetModels.push(obj);
     }
   });
   
+  // 排除最顶部的标题栏区域（顶部5%高度内的mesh）
+  if (cabinetModels.length > 0) {
+    let allMinY = Infinity, allMaxY = -Infinity;
+    cabinetModels.forEach(obj => {
+      const b = new THREE.Box3().setFromObject(obj);
+      if (b.min.y < allMinY) allMinY = b.min.y;
+      if (b.max.y > allMaxY) allMaxY = b.max.y;
+    });
+    const totalH = allMaxY - allMinY;
+    const topCutoff = allMaxY - totalH * 0.05;
+    const filtered = cabinetModels.filter(obj => {
+      const b = new THREE.Box3().setFromObject(obj);
+      const cy = (b.min.y + b.max.y) / 2;
+      return cy < topCutoff;
+    });
+    if (filtered.length > 0) {
+      console.log(`找到柜子 ${triggerModelName} 的 ${filtered.length} 个组成部分（已排除顶部标题栏）`);
+      return filtered;
+    }
+  }
+
   console.log(`找到柜子 ${triggerModelName} 的 ${cabinetModels.length} 个组成部分`);
   return cabinetModels;
 }
@@ -491,6 +513,134 @@ function clearCabinetHighlight(app) {
   currentHighlightedCabinetModels = [];
   console.log('已清除柜子高亮');
 }
+
+/**
+ * 将柜子的所有mesh按Y轴从上到下分成equipmentTotal层，
+ * 只对第equipmentIndex层施加闪烁效果。
+ * 合闸→绿色，分闸→红色。
+ */
+function applySwitchEffect(cabinetId, equipmentIndex, equipmentTotal, status) {
+  const app = window.app;
+  if (!app) return;
+
+  initModelMaps();
+
+  const allConfigs = [...roomA, ...roomB, ...roomD];
+  const config = allConfigs.find(c => c.id === cabinetId);
+  if (!config) {
+    console.warn('applySwitchEffect: 未找到柜子配置', cabinetId);
+    return;
+  }
+
+  let roomModel = null;
+  if (roomA.includes(config)) roomModel = app.aRoomModel;
+  else if (roomB.includes(config)) roomModel = app.bRoomModel;
+  else if (roomD.includes(config)) roomModel = app.dRoomModel;
+  if (!roomModel) return;
+
+  const cabinetModels = findAllCabinetModels(config.triggerModel, roomModel);
+  if (cabinetModels.length === 0) return;
+
+  // 计算整个柜子的Y轴范围
+  let minY = Infinity, maxY = -Infinity;
+  cabinetModels.forEach(obj => {
+    const box = new THREE.Box3().setFromObject(obj);
+    if (box.min.y < minY) minY = box.min.y;
+    if (box.max.y > maxY) maxY = box.max.y;
+  });
+
+  const cabinetHeight = maxY - minY;
+  if (cabinetHeight <= 0 || equipmentTotal <= 0) return;
+
+  // 每层的高度
+  const layerHeight = cabinetHeight / equipmentTotal;
+  // 第 equipmentIndex 层的Y范围（从上往下: index 0 = 最高层）
+  const layerTopY = maxY - equipmentIndex * layerHeight;
+  const layerBottomY = maxY - (equipmentIndex + 1) * layerHeight;
+
+  // 筛选出属于这一层的mesh（中心在该层范围内）
+  const layerMeshes = cabinetModels.filter(obj => {
+    const box = new THREE.Box3().setFromObject(obj);
+    const centerY = (box.min.y + box.max.y) / 2;
+    return centerY <= layerTopY && centerY >= layerBottomY;
+  });
+
+  if (layerMeshes.length === 0) {
+    console.warn(`第${equipmentIndex}层未找到mesh，尝试扩大范围`);
+    return;
+  }
+
+  console.log(`柜${cabinetId} 第${equipmentIndex + 1}层: ${layerMeshes.length}个mesh (Y: ${layerBottomY.toFixed(1)}~${layerTopY.toFixed(1)})`);
+
+  const flashColor = status ? new THREE.Color(0x00ff88) : new THREE.Color(0xff3333);
+
+  // 保存这些mesh的原始材质
+  const savedMaterials = new Map();
+  layerMeshes.forEach(obj => {
+    if (obj.isMesh && obj.material) {
+      if (Array.isArray(obj.material)) {
+        savedMaterials.set(obj.uuid, obj.material.map(m => m.clone()));
+      } else {
+        savedMaterials.set(obj.uuid, obj.material.clone());
+      }
+    }
+  });
+
+  // 闪烁动画
+  if (switchAnimationFrameId) {
+    cancelAnimationFrame(switchAnimationFrameId);
+    switchAnimationFrameId = null;
+  }
+
+  let flashCount = 0;
+  const maxFlashes = 4;
+  let isFlashOn = false;
+  let lastTime = 0;
+  const interval = 200;
+
+  function setFlash(on) {
+    layerMeshes.forEach(obj => {
+      if (!obj.isMesh || !obj.material) return;
+      if (Array.isArray(obj.material)) {
+        obj.material.forEach(m => {
+          m.emissive = on ? flashColor : new THREE.Color(0x000000);
+          m.emissiveIntensity = on ? 0.8 : 0;
+        });
+      } else {
+        obj.material.emissive = on ? flashColor : new THREE.Color(0x000000);
+        obj.material.emissiveIntensity = on ? 0.8 : 0;
+      }
+    });
+  }
+
+  function animate(time) {
+    if (!lastTime) lastTime = time;
+    if (time - lastTime >= interval) {
+      lastTime = time;
+      isFlashOn = !isFlashOn;
+      setFlash(isFlashOn);
+      if (!isFlashOn) flashCount++;
+
+      if (flashCount >= maxFlashes) {
+        // 恢复原始材质
+        layerMeshes.forEach(obj => {
+          if (obj.isMesh && savedMaterials.has(obj.uuid)) {
+            obj.material = savedMaterials.get(obj.uuid);
+          }
+        });
+        if (currentHighlightedCabinetModels.length > 0) {
+          highlightCabinet(app, config.triggerModel, roomModel);
+        }
+        switchAnimationFrameId = null;
+        return;
+      }
+    }
+    switchAnimationFrameId = requestAnimationFrame(animate);
+  }
+
+  switchAnimationFrameId = requestAnimationFrame(animate);
+}
+
 // 创建 设备标签
 function createTriggerLabels(app) {
   // 遍历roomA，生成triggerModel标签

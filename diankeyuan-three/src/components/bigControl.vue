@@ -58,6 +58,7 @@ export default {
         {
           name: '首页',
           goFunction: () => {
+            EventBus.$emit('showSceneDecorations');
             window.app.flyTo({
               position: [40.672568371153744, 96.15288680991578, -18.321015281826696],
               controls: [-19.265339753753807, 31.91865695374252, -35.958997358413164],
@@ -178,6 +179,7 @@ export default {
         {
           name: '操作仿真',
           goFunction: () => {
+            EventBus.$emit('hideSceneDecorations');
             // 先将模型设置为线框模式，除了配电室
             window.app.model.traverse((obj) => {
               if (obj.isMesh && obj.name.indexOf('配电室') === -1) {
@@ -247,6 +249,7 @@ export default {
         {
           name: '线缆显示',
           goFunction: function() {
+            EventBus.$emit('hideSceneDecorations');
             console.log('激活线缆显示功能');
             try {
               // 首先清理当前的配电室视图

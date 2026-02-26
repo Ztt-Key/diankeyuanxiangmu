@@ -1,11 +1,16 @@
 import * as THREE from 'three';
+import EventBus from '../bus';
+
+let decorationGroup = null;
 
 /**
  * 在园区主体建筑外围添加装饰元素：树木、花坛、周边小建筑、路灯
+ * 仅在首页显示，进入操作仿真/线缆显示等子模块时自动隐藏
  */
 export function createSceneDecorations(app) {
   const group = new THREE.Group();
   group.name = 'sceneDecorations';
+  decorationGroup = group;
 
   createSurroundingTrees(group);
   createFlowerBeds(group);
@@ -14,6 +19,18 @@ export function createSceneDecorations(app) {
 
   app.scene.add(group);
   console.log('场景外围装饰已添加');
+
+  // 进入子模块时隐藏装饰
+  EventBus.$off('hideSceneDecorations');
+  EventBus.$on('hideSceneDecorations', () => {
+    if (decorationGroup) decorationGroup.visible = false;
+  });
+
+  // 回到首页时显示装饰
+  EventBus.$off('showSceneDecorations');
+  EventBus.$on('showSceneDecorations', () => {
+    if (decorationGroup) decorationGroup.visible = true;
+  });
 }
 
 // ========== 树木 ==========

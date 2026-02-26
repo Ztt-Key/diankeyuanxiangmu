@@ -1228,12 +1228,13 @@ export default {
     .box-content {
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
         width: 100%;
         height: calc(100% - 80px);
-        padding: 20px;
+        padding: 0;
         box-sizing: border-box;
         overflow-y: auto;
+        gap: 0;
 
         // 添加与cable.vue相同的滚动条样式
         &::-webkit-scrollbar {
@@ -1263,12 +1264,13 @@ export default {
     }
 
     .video-container {
-        margin-bottom: 20px;
-        padding: 10px 10px 10px 10px;
+        margin: 0;
+        padding: 0;
         background: rgba(0, 0, 0, 0.5);
-        border-radius: 8px;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        border-radius: 0;
+        border: none;
+        border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: none;
         position: relative;
         color: #fff;
 
@@ -1276,8 +1278,12 @@ export default {
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            margin-bottom: 6px;
-            position: relative;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
             z-index: 2;
 
             h3 {
@@ -1309,7 +1315,7 @@ export default {
         &:first-child .box-video-c,
         &:first-child .box-video-d,
         &:first-child .box-image {
-            border-radius: 6px 6px 0 0;
+            border-radius: 0;
         }
 
         &:last-child .box-video,
@@ -1317,7 +1323,7 @@ export default {
         &:last-child .box-video-c,
         &:last-child .box-video-d,
         &:last-child .box-image {
-            border-radius: 0 0 6px 6px;
+            border-radius: 0;
         }
 
         &:only-child .box-video,
@@ -1325,7 +1331,7 @@ export default {
         &:only-child .box-video-c,
         &:only-child .box-video-d,
         &:only-child .box-image {
-            border-radius: 6px;
+            border-radius: 0;
         }
 
         h3 {
@@ -1354,6 +1360,7 @@ export default {
     }
 
     .box-video {
+        display: block;
         width: 450px;
         height: 100px;
         object-fit: cover;
@@ -1362,7 +1369,7 @@ export default {
         z-index: 1;
         border-radius: 0;
         border: none;
-        border-bottom: 1px solid rgba(0, 80, 120, 0.3);
+        border-bottom: none;
 
         &::-webkit-media-controls {
             display: none !important;
@@ -1373,7 +1380,6 @@ export default {
         height: 400px;
         border-radius: 0;
         border: none;
-        border-bottom: 1px solid rgba(0, 80, 120, 0.3);
     }
     
     .box-video-c {
@@ -1382,7 +1388,6 @@ export default {
         object-fit: contain;
         border-radius: 0;
         border: none;
-        border-bottom: 1px solid rgba(0, 80, 120, 0.3);
         box-shadow: none;
     }
 
@@ -1392,11 +1397,11 @@ export default {
         object-fit: contain;
         border-radius: 0;
         border: none;
-        border-bottom: 1px solid rgba(0, 80, 120, 0.3);
         box-shadow: none;
     }
 
     .box-image {
+        display: block;
         width: 450px;
         height: 300px;
         object-fit: cover;
@@ -1405,7 +1410,6 @@ export default {
         z-index: 1;
         border-radius: 0;
         border: none;
-        border-bottom: 1px solid rgba(0, 80, 120, 0.3);
     }
 }
 
@@ -1413,7 +1417,7 @@ export default {
 .box-content {
     .video-container:first-child {
         .box-video, .box-video-b, .box-video-c, .box-video-d, .box-image {
-            border-top: 1px solid rgba(0, 120, 180, 0.4);
+            border-top: none;
         }
     }
 }

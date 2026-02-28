@@ -149,44 +149,92 @@
             />
         </div>
     </div>
-    <el-drawer destroy-on-close size="800" v-model="dialogFormVisible" :show-close="false" :before-close="closeDialog">
-       <template #header>
-              <div class="flex justify-between items-center">
-                <span class="text-lg">{{type==='create'?'新增':'编辑'}}</span>
-                <div>
-                  <el-button :loading="btnLoading" type="primary" @click="enterDialog">确 定</el-button>
-                  <el-button @click="closeDialog">取 消</el-button>
-                </div>
-              </div>
-            </template>
+    <el-drawer
+      destroy-on-close
+      size="800"
+      v-model="dialogFormVisible"
+      :show-close="true"
+      :before-close="closeDialog"
+      class="examples-drawer"
+      direction="rtl"
+    >
+      <template #header>
+        <div class="drawer-header">
+          <div class="drawer-title-wrap">
+            <el-icon class="drawer-title-icon"><DocumentAdd v-if="type==='create'" /><EditPen v-else /></el-icon>
+            <span class="drawer-title">{{ type === 'create' ? '新增示例' : '编辑示例' }}</span>
+          </div>
+          <div class="drawer-actions">
+            <el-button @click="closeDialog">取 消</el-button>
+            <el-button :loading="btnLoading" type="primary" @click="enterDialog">
+              <el-icon style="margin-right: 4px;"><Select /></el-icon>
+              确 定
+            </el-button>
+          </div>
+        </div>
+      </template>
 
-          <el-form :model="formData" label-position="top" ref="elFormRef" :rules="rule" label-width="80px">
-            <el-form-item label="内容:"  prop="value" >
+      <div class="drawer-body">
+        <el-form :model="formData" label-position="top" ref="elFormRef" :rules="rule" label-width="80px" class="examples-form">
+          <div class="form-section">
+            <div class="form-section-title">
+              <el-icon><User /></el-icon>
+              <span>基本信息</span>
+            </div>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="绑定模板ID" prop="templeId">
+                  <el-input v-model="formData.templeId" clearable placeholder="请输入绑定模板ID" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="申请人ID" prop="applicantId">
+                  <el-input v-model.number="formData.applicantId" clearable placeholder="请输入申请人ID" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="24">
+                <el-form-item label="申请人姓名" prop="applicantName">
+                  <el-input v-model="formData.applicantName" clearable placeholder="请输入申请人姓名" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">
+              <el-icon><Document /></el-icon>
+              <span>内容数据 (JSON)</span>
+            </div>
+            <el-form-item prop="value">
               <el-input
                 v-model="inputValue"
                 type="textarea"
-                :rows="20"
-                style="height: 500px;"
+                :rows="12"
+                placeholder='请输入 JSON 格式内容，例如：{"templateData":{...}}'
+                class="json-textarea"
+                resize="vertical"
               />
             </el-form-item>
-            <el-form-item label="填写日志:"  prop="log" >
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">
+              <el-icon><Notebook /></el-icon>
+              <span>填写日志 (JSON)</span>
+            </div>
+            <el-form-item prop="log">
               <el-input
                 v-model="logInputValue"
                 type="textarea"
-                :rows="20"
-                style="height: 500px;"
+                :rows="8"
+                placeholder="请输入填写日志 JSON"
+                class="json-textarea"
+                resize="vertical"
               />
             </el-form-item>
-            <el-form-item label="绑定模板ID:"  prop="templeId" >
-              <el-input v-model="formData.templeId" :clearable="true"  placeholder="请输入绑定模板ID" />
-            </el-form-item>
-            <el-form-item label="申请人ID:"  prop="applicantId" >
-              <el-input v-model.number="formData.applicantId" :clearable="true" placeholder="请输入申请人ID" />
-            </el-form-item>
-            <el-form-item label="申请人姓名:"  prop="applicantName" >
-              <el-input v-model="formData.applicantName" :clearable="true"  placeholder="请输入申请人姓名" />
-            </el-form-item>
-          </el-form>
+          </div>
+        </el-form>
+      </div>
     </el-drawer>
 
     <el-drawer destroy-on-close size="800" v-model="detailShow" :show-close="true" :before-close="closeDetailShow" title="查看">
@@ -225,6 +273,7 @@ import {
 // 全量引入格式化工具 请按需保留
 import { getDictFunc, formatDate, formatBoolean, filterDict ,filterDataSource, returnArrImg, onDownloadFile } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { DocumentAdd, EditPen, Select, User, Document, Notebook } from '@element-plus/icons-vue'
 import { ref, reactive } from 'vue'
 
 
@@ -418,6 +467,15 @@ const dialogFormVisible = ref(false)
 // 打开弹窗
 const openDialog = () => {
     type.value = 'create'
+    formData.value = {
+        value: {},
+        log: {},
+        templeId: '',
+        applicantId: undefined,
+        applicantName: '',
+    }
+    inputValue.value = JSON.stringify({ templateData: {} }, null, 2)
+    logInputValue.value = JSON.stringify({}, null, 2)
     dialogFormVisible.value = true
 }
 
@@ -747,6 +805,95 @@ const handleFormData = (data) => {
     align-items: center;
     gap: 8px;
     padding: 4px;
+}
+
+/* ========== 新增/编辑抽屉样式 ========== */
+.examples-drawer :deep(.el-drawer__header) {
+    margin-bottom: 0;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.examples-drawer :deep(.el-drawer__body) {
+    padding: 0;
+    overflow-y: auto;
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.drawer-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawer-title-icon {
+    font-size: 22px;
+    color: var(--el-color-primary);
+}
+
+.drawer-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+}
+
+.drawer-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.drawer-body {
+    padding: 20px 24px 32px;
+}
+
+.examples-form {
+    max-width: 100%;
+}
+
+.form-section {
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    background: var(--el-fill-color-blank);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 8px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.form-section-title .el-icon {
+    font-size: 18px;
+    color: var(--el-color-primary);
+}
+
+.json-textarea {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.examples-drawer :deep(.json-textarea textarea) {
+    min-height: 120px;
 }
 
 </style>

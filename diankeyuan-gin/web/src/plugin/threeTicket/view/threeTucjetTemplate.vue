@@ -75,28 +75,34 @@
           @size-change="handleSizeChange" />
       </div>
     </div>
-    <el-drawer destroy-on-close size="800" v-model="dialogFormVisible" :show-close="false" :before-close="closeDialog">
+    <el-drawer
+      destroy-on-close
+      size="50%"
+      v-model="dialogFormVisible"
+      :show-close="true"
+      :before-close="closeDialog"
+      class="template-drawer"
+      direction="rtl"
+    >
       <template #header>
-        <div class="flex justify-between items-center">
-          <span class="text-lg">{{ type === 'create' ? '新增' : '编辑' }}</span>
-          <div>
-            <el-button :loading="btnLoading" type="primary" @click="enterDialog">确 定</el-button>
+        <div class="template-drawer-header">
+          <span class="template-drawer-title">{{ type === 'create' ? '新增模板' : '编辑模板' }}</span>
+          <div class="template-drawer-actions">
             <el-button @click="closeDialog">取 消</el-button>
+            <el-button :loading="btnLoading" type="primary" @click="enterDialog">确 定</el-button>
           </div>
         </div>
       </template>
 
-      <el-form :model="formData" label-position="top" ref="elFormRef" :rules="rule" label-width="80px">
-        <el-form-item label="模板名称:" prop="name">
-          <el-input v-model="formData.name" :clearable="true" placeholder="请输入模板名称" />
-        </el-form-item>
-        <el-form-item label="模板内容:" prop="value">
-          <!-- 添加可视化的结构化内容展示 -->
-          <div class="template-content-display"
-            style="margin-bottom: 20px; border: 1px solid #ebeef5; border-radius: 4px; padding: 15px;">
+      <div class="template-drawer-body">
+        <el-form :model="formData" label-position="top" ref="elFormRef" :rules="rule" label-width="80px" class="template-form">
+          <el-form-item label="模板名称" prop="name">
+            <el-input v-model="formData.name" clearable placeholder="请输入模板名称" />
+          </el-form-item>
+          <el-form-item label="模板内容" prop="value">
+            <div class="template-content-display">
             <div v-if="formData.value && formData.value.value && formData.value.value.length > 0">
-              <!-- 添加步骤按钮 -->
-              <div class="action-bar" style="margin-bottom: 15px; text-align: right;">
+              <div class="template-content-action-bar">
                 <el-button type="primary" size="small" icon="Plus" @click="addStepToFormData">添加步骤</el-button>
               </div>
 
@@ -104,14 +110,13 @@
                 <div v-for="(step, index) in formData.value.value" :key="index" class="template-step">
                   <div class="step-header">
                     <span class="step-number">步骤 {{ index + 1 }}</span>
-                    <div class="step-title-container" style="flex: 1; display: flex; align-items: center;">
+                    <div class="step-title-container">
                       <el-input v-if="step.name !== undefined" v-model="step.name" size="small"
-                        style="max-width: 200px; margin-right: 10px;" @input="updateFormDataJSON" placeholder="步骤名称" />
+                        class="step-name-input" @input="updateFormDataJSON" placeholder="步骤名称" />
                       <el-input v-else-if="step.title !== undefined" v-model="step.title" size="small"
-                        style="max-width: 200px; margin-right: 10px;" @input="updateFormDataJSON" placeholder="步骤标题" />
+                        class="step-name-input" @input="updateFormDataJSON" placeholder="步骤标题" />
                     </div>
-                    <!-- 步骤操作按钮 -->
-                    <div class="step-actions" style="display: flex; gap: 8px;">
+                    <div class="step-actions">
                       <el-button type="primary" size="small" @click="addPropertyToFormData(step)">添加属性</el-button>
                       <el-button type="danger" size="small" @click="removeStepFromFormData(index)">删除步骤</el-button>
                     </div>
@@ -129,50 +134,49 @@
                         </select> -->
                         <span class="step-key">{{ keyToDisplay(key) }}:</span>
                         <div class="step-value">
-                          <!-- 简单值处理 - 直接编辑 -->
-                          <div v-if="!isComplexValue(value)">
-                            <span v-if="typeof value === 'boolean'">
-                              <el-switch v-model="step[key]" @change="updateFormDataJSON" />
-                            </span>
-                            <span v-else-if="typeof value === 'number'">
-                              <el-input-number v-model="step[key]" :controls="false" size="small"
-                                @change="updateFormDataJSON" />
-                            </span>
-                            <span v-else-if="typeof value === 'string' && key.toLowerCase() === 'type'">
-                              <el-select v-model="step[key]" size="small" @change="updateFormDataJSON" placeholder="请选择类型">
-  
-                                <el-option label="创建" value="input"></el-option>
-                                <el-option label="审核中" value="audit"></el-option>
-                              </el-select>
-                            </span>
-                            <span v-else-if="typeof value === 'string'">
-                              <el-input v-model="step[key]" size="small" @input="updateFormDataJSON" />
-                            </span>
-                            <span v-else-if="value === null || value === undefined">
-                              <el-input v-model="step[key]" placeholder="空值" size="small" @input="updateFormDataJSON" />
-                            </span>
-                            <span v-else>{{ value }}</span>
-                            <!-- 删除属性按钮 -->
-                            <el-button type="danger" size="small" style="margin-left: 10px;"
+                          <!-- 简单值处理 - 输入框与删除属性同一行 -->
+                          <div v-if="!isComplexValue(value)" class="step-value-row">
+                            <div class="step-value-input">
+                              <span v-if="typeof value === 'boolean'">
+                                <el-switch v-model="step[key]" @change="updateFormDataJSON" />
+                              </span>
+                              <span v-else-if="typeof value === 'number'">
+                                <el-input-number v-model="step[key]" :controls="false" size="small"
+                                  @change="updateFormDataJSON" />
+                              </span>
+                              <span v-else-if="typeof value === 'string' && key.toLowerCase() === 'type'">
+                                <el-select v-model="step[key]" size="small" @change="updateFormDataJSON" placeholder="请选择类型">
+                                  <el-option label="创建" value="input"></el-option>
+                                  <el-option label="审核中" value="audit"></el-option>
+                                </el-select>
+                              </span>
+                              <span v-else-if="typeof value === 'string'">
+                                <el-input v-model="step[key]" size="small" @input="updateFormDataJSON" />
+                              </span>
+                              <span v-else-if="value === null || value === undefined">
+                                <el-input v-model="step[key]" placeholder="空值" size="small" @input="updateFormDataJSON" />
+                              </span>
+                              <span v-else>{{ value }}</span>
+                            </div>
+                            <el-button type="danger" size="small" class="step-delete-btn"
                               @click="removePropertyFromFormData(step, key)">删除属性</el-button>
                           </div>
 
-                          <!-- 复杂值处理 -->
+                          <!-- 复杂值处理 - 删除属性在右侧 -->
                           <div v-else>
-                            <div style="display: flex; align-items: center;">
-                              <span v-if="value && value.name !== undefined">
-                                名称: <el-input v-model="value.name" size="small"
-                                  style="width: 120px; margin: 0 10px 0 5px;" @input="updateFormDataJSON" />
-                              </span>
-                              <span v-if="value && value.title !== undefined">
-                                标题: <el-input v-model="value.title" size="small"
-                                  style="width: 120px; margin: 0 10px 0 5px;" @input="updateFormDataJSON" />
-                              </span>
-                              <span class="complex-toggle" @click="toggleExpand(key)">查看详情 {{ expandedItems[key] ? '[-]'
-                                :
-                                '[+]' }}</span>
-                              <!-- 删除属性按钮 -->
-                              <el-button type="danger" size="small" style="margin-left: 10px;"
+                            <div class="step-value-row step-value-row-complex">
+                              <div class="step-value-input step-value-input-complex">
+                                <span v-if="value && value.name !== undefined">
+                                  名称: <el-input v-model="value.name" size="small"
+                                    class="inline-input" @input="updateFormDataJSON" />
+                                </span>
+                                <span v-if="value && value.title !== undefined">
+                                  标题: <el-input v-model="value.title" size="small"
+                                    class="inline-input" @input="updateFormDataJSON" />
+                                </span>
+                                <span class="complex-toggle" @click="toggleExpand(key)">查看详情 {{ expandedItems[key] ? '[-]' : '[+]' }}</span>
+                              </div>
+                              <el-button type="danger" size="small" class="step-delete-btn"
                                 @click="removePropertyFromFormData(step, key)">删除属性</el-button>
                             </div>
 
@@ -222,26 +226,27 @@
                                             v-show="!isHiddenField(nestedKey)">
                                             <div class="property-key">{{ keyToDisplay(nestedKey) }}:</div>
                                             <div class="property-value">
-                                              <!-- 简单值编辑 -->
-                                              <div v-if="!isComplexValue(nestedValue)">
-                                                <span v-if="typeof nestedValue === 'boolean'">
-                                                  <el-switch v-model="item[nestedKey]" @change="updateFormDataJSON" />
-                                                </span>
-                                                <span v-else-if="typeof nestedValue === 'number'">
-                                                  <el-input-number v-model="item[nestedKey]" :controls="false"
-                                                    size="small" @change="updateFormDataJSON" />
-                                                </span>
-                                                <span v-else-if="typeof nestedValue === 'string'">
-                                                  <el-input v-model="item[nestedKey]" size="small"
-                                                    @input="updateFormDataJSON" />
-                                                </span>
-                                                <span v-else-if="nestedValue === null || nestedValue === undefined">
-                                                  <el-input v-model="item[nestedKey]" placeholder="空值" size="small"
-                                                    @input="updateFormDataJSON" />
-                                                </span>
-                                                <span v-else>{{ nestedValue }}</span>
-                                                <!-- 删除属性按钮 -->
-                                                <el-button type="danger" size="small" style="margin-left: 10px;"
+                                              <!-- 简单值编辑 - 删除属性在输入框右侧 -->
+                                              <div v-if="!isComplexValue(nestedValue)" class="step-value-row">
+                                                <div class="step-value-input">
+                                                  <span v-if="typeof nestedValue === 'boolean'">
+                                                    <el-switch v-model="item[nestedKey]" @change="updateFormDataJSON" />
+                                                  </span>
+                                                  <span v-else-if="typeof nestedValue === 'number'">
+                                                    <el-input-number v-model="item[nestedKey]" :controls="false"
+                                                      size="small" @change="updateFormDataJSON" />
+                                                  </span>
+                                                  <span v-else-if="typeof nestedValue === 'string'">
+                                                    <el-input v-model="item[nestedKey]" size="small"
+                                                      @input="updateFormDataJSON" />
+                                                  </span>
+                                                  <span v-else-if="nestedValue === null || nestedValue === undefined">
+                                                    <el-input v-model="item[nestedKey]" placeholder="空值" size="small"
+                                                      @input="updateFormDataJSON" />
+                                                  </span>
+                                                  <span v-else>{{ nestedValue }}</span>
+                                                </div>
+                                                <el-button type="danger" size="small" class="step-delete-btn"
                                                   @click="removePropertyFromFormData(item, nestedKey)">删除属性</el-button>
                                               </div>
                                             </div>
@@ -285,25 +290,15 @@
               </div>
             </div>
             <div v-else class="empty-template">
-              <div style="text-align: center; width: 100%;">
+              <div class="empty-template-inner">
                 <el-empty description="暂无模板内容" />
                 <el-button type="primary" @click="addStepToFormData">添加第一个步骤</el-button>
               </div>
             </div>
           </div>
-
-          <!-- JSON编辑器标题 -->
-          <!-- <div style="margin: 10px 0 5px 0; font-weight: bold; color: #606266;">JSON编辑区域：</div>
-               -->
-          <!-- 原有的JSON编辑功能 -->
-          <!-- <el-input
-                v-model="inputValue"
-                type="textarea"
-                :rows="15"
-                style="height: 350px;"
-              /> -->
         </el-form-item>
       </el-form>
+      </div>
     </el-drawer>
 
     <el-drawer destroy-on-close size="800" v-model="detailShow" :show-close="true" :before-close="closeDetailShow"
@@ -382,18 +377,10 @@
                                                   <span v-if="nestedValue && nestedValue.title" class="object-title">"{{
                                                     nestedValue.title }}"</span>
                                                 </div>
-                                                <!-- 简单值显示 -->
+                                                <!-- 简单值显示（英文转中文） -->
                                                 <div v-else>
                                                   <span class="value-content">
-                                                    <span v-if="nestedValue === null || nestedValue === undefined"
-                                                      class="null-value">空值</span>
-                                                    <span v-else-if="typeof nestedValue === 'boolean'"
-                                                      class="boolean-value">{{ nestedValue ? '是' : '否' }}</span>
-                                                    <span v-else-if="typeof nestedValue === 'number'"
-                                                      class="number-value">{{ nestedValue }}</span>
-                                                    <span v-else-if="typeof nestedValue === 'string'"
-                                                      class="string-value">{{ nestedValue }}</span>
-                                                    <span v-else>{{ nestedValue }}</span>
+                                                    {{ formatSimpleValue(nestedValue, nestedKey) }}
                                                   </span>
                                                 </div>
                                               </div>
@@ -404,15 +391,7 @@
                                       <!-- 数组中的简单值 -->
                                       <div v-else>
                                         <span class="value-content">
-                                          <span v-if="item === null || item === undefined" class="null-value">空值</span>
-                                          <span v-else-if="typeof item === 'boolean'" class="boolean-value">{{ item ?
-                                            '是' :
-                                            '否' }}</span>
-                                          <span v-else-if="typeof item === 'number'" class="number-value">{{ item
-                                            }}</span>
-                                          <span v-else-if="typeof item === 'string'" class="string-value">{{ item
-                                            }}</span>
-                                          <span v-else>{{ item }}</span>
+                                          {{ formatSimpleValue(item, key) }}
                                         </span>
                                       </div>
                                     </div>
@@ -432,18 +411,10 @@
                                           <span v-if="nestedValue && nestedValue.title" class="object-title">"{{
                                             nestedValue.title }}"</span>
                                         </div>
-                                        <!-- 简单值显示 -->
+                                        <!-- 简单值显示（英文转中文） -->
                                         <div v-else>
                                           <span class="value-content">
-                                            <span v-if="nestedValue === null || nestedValue === undefined"
-                                              class="null-value">空值</span>
-                                            <span v-else-if="typeof nestedValue === 'boolean'" class="boolean-value">{{
-                                              nestedValue ? '是' : '否' }}</span>
-                                            <span v-else-if="typeof nestedValue === 'number'" class="number-value">{{
-                                              nestedValue }}</span>
-                                            <span v-else-if="typeof nestedValue === 'string'" class="string-value">{{
-                                              nestedValue }}</span>
-                                            <span v-else>{{ nestedValue }}</span>
+                                            {{ formatSimpleValue(nestedValue, nestedKey) }}
                                           </span>
                                         </div>
                                       </div>
@@ -452,15 +423,10 @@
                                 </div>
                               </div>
                             </div>
-                            <!-- 简单值处理 -->
+                            <!-- 简单值处理（英文转中文，如类型 input→创建） -->
                             <div v-else>
                               <span class="value-content">
-                                <span v-if="value === null || value === undefined" class="null-value">空值</span>
-                                <span v-else-if="typeof value === 'boolean'" class="boolean-value">{{ value ? '是' : '否'
-                                  }}</span>
-                                <span v-else-if="typeof value === 'number'" class="number-value">{{ value }}</span>
-                                <span v-else-if="typeof value === 'string'" class="string-value">{{ value }}</span>
-                                <span v-else>{{ value }}</span>
+                                {{ formatSimpleValue(value, key) }}
                               </span>
                             </div>
                           </div>
@@ -886,6 +852,7 @@ const ObjectDisplay = defineComponent({
         progress: '进度',
         result: '结果',
         action: '操作',
+        actions: '操作',
         reason: '原因',
         solution: '解决方案',
         steps: '步骤',
@@ -898,19 +865,41 @@ const ObjectDisplay = defineComponent({
         isRequired: '是否必须',
         isEnabled: '是否启用',
         isVisible: '是否可见',
-        isActive: '是否激活'
+        isActive: '是否激活',
+        required: '必填',
+        placeholder: '占位提示',
+        columns: '列'
       };
 
       return translations[keyStr] || keyStr.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
     };
 
-    // 格式化简单值
+    // 格式化简单值（含类型等英文字段值转中文）
     const formatSimpleValue = (value, key) => {
       if (value === null || value === undefined) {
         return '空值';
       } else if (typeof value === 'boolean') {
         return value ? '是' : '否';
       } else if (typeof value === 'string') {
+        const keyLower = String(key).toLowerCase();
+        if (keyLower === 'type') {
+          const typeMap = {
+            'input': '创建',
+            'audit': '审核',
+            'auditor': '审核人',
+            'table': '表格',
+            'task': '任务',
+            'bug': '缺陷',
+            'feature': '功能',
+            'improvement': '改进',
+            'textarea': '多行文本',
+            'signature': '签名',
+            'dateTimeRange': '日期时间范围',
+            'checkbox': '勾选',
+            'select': '选择'
+          };
+          return typeMap[value] || value;
+        }
         if (key === 'status') {
           const statusMap = {
             'pending': '待处理',
@@ -927,14 +916,6 @@ const ObjectDisplay = defineComponent({
             'low': '低'
           };
           return priorityMap[value] || value;
-        } else if (key === 'type') {
-          const typeMap = {
-            'task': '任务',
-            'bug': '缺陷',
-            'feature': '功能',
-            'improvement': '改进'
-          };
-          return typeMap[value] || value;
         }
 
         // 对于长字符串，截取并添加省略号
@@ -1534,6 +1515,7 @@ const keyToDisplay = (key) => {
     progress: '进度',
     result: '结果',
     action: '操作',
+    actions: '操作',
     reason: '原因',
     solution: '解决方案',
     steps: '步骤',
@@ -1546,10 +1528,48 @@ const keyToDisplay = (key) => {
     isRequired: '是否必须',
     isEnabled: '是否启用',
     isVisible: '是否可见',
-    isActive: '是否激活'
+    isActive: '是否激活',
+    required: '必填',
+    placeholder: '占位提示',
+    columns: '列'
   };
 
   return translations[keyStr] || keyStr.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+};
+
+// 格式化简单值（查看详情时英文字段值转中文，供模板使用）
+const formatSimpleValue = (value, key) => {
+  if (value === null || value === undefined) {
+    return '空值';
+  }
+  if (typeof value === 'boolean') {
+    return value ? '是' : '否';
+  }
+  if (typeof value === 'string') {
+    const keyLower = String(key).toLowerCase();
+    if (keyLower === 'type') {
+      const typeMap = {
+        'input': '创建',
+        'audit': '审核',
+        'auditor': '审核人',
+        'table': '表格',
+        'textarea': '多行文本',
+        'signature': '签名',
+        'dateTimeRange': '日期时间范围',
+        'checkbox': '勾选',
+        'select': '选择'
+      };
+      return typeMap[value] || value;
+    }
+    if (value.length > 100) {
+      return value.substring(0, 100) + '...';
+    }
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+  return String(value);
 };
 
 // 详情页编辑相关
@@ -1975,22 +1995,120 @@ const addNestedProperty = (obj) => {
   height: 500px !important;
 }
 
-/* 模板内容显示样式 */
+/* 新增/编辑模板抽屉 - 右侧占满且上下占满 */
+.template-drawer :deep(.el-drawer) {
+  max-width: 100%;
+  height: 100vh !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.template-drawer :deep(.el-drawer__header) {
+  margin-bottom: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  flex-shrink: 0;
+}
+
+.template-drawer :deep(.el-drawer__body) {
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.template-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.template-drawer-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.template-drawer-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.template-drawer-body {
+  padding: 20px 24px 32px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.template-form {
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.template-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.template-form :deep(.el-form-item:last-child) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.template-form :deep(.el-form-item:last-child .el-form-item__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 模板内容区域 - 占满宽度与剩余高度，内部滚动 */
 .template-content-display {
-  max-height: 600px;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 10px;
+  padding: 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+  box-sizing: border-box;
 }
 
 .template-steps {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
 }
 
 .template-step {
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--el-border-color-light, #dcdfe6);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   background-color: var(--el-bg-color, #fff);
@@ -2003,11 +2121,12 @@ const addNestedProperty = (obj) => {
 
 .step-header {
   background-color: var(--el-color-primary-light-9, #ecf5ff);
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--el-border-color-light, #dcdfe6);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .step-number {
@@ -2017,43 +2136,115 @@ const addNestedProperty = (obj) => {
 
 .step-title-container {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
+}
+
+.step-title-container .el-input,
+.step-title-container .step-name-input {
+  flex: 1;
+  min-width: 120px;
+  max-width: 100%;
 }
 
 .step-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .step-body {
-  padding: 12px 16px;
+  padding: 14px 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .step-item {
   display: flex;
-  margin-bottom: 8px;
+  align-items: center;
+  margin-bottom: 10px;
   line-height: 1.5;
-  flex-wrap: wrap;
   border-bottom: 1px dashed var(--el-border-color-lighter, #ebeef5);
-  padding-bottom: 6px;
+  padding-bottom: 10px;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .step-item:last-child {
   border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .step-key {
-  min-width: 120px;
+  flex-shrink: 0;
+  min-width: 80px;
   font-weight: 600;
   color: var(--el-text-color-regular, #606266);
-  margin-right: 8px;
 }
 
 .step-value {
   flex: 1;
+  min-width: 0;
   color: var(--el-text-color-primary, #303133);
   word-break: break-word;
+}
+
+/* 输入框与删除属性同一行 - 删除属性在右侧 */
+.step-value-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+.step-value-input {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.step-value-input .el-input,
+.step-value-input .el-select {
+  flex: 1;
+  min-width: 120px;
+  max-width: 100%;
+}
+
+.step-value-input.inline-input {
+  flex: none;
+}
+
+.step-delete-btn {
+  flex-shrink: 0;
+}
+
+.step-value-row-complex .step-value-input-complex {
+  flex-wrap: wrap;
+}
+
+.step-value-row-complex .step-value-input-complex .el-input.inline-input,
+.step-value-row-complex .step-value-input-complex .el-input {
+  width: 140px;
+  min-width: 100px;
+  flex: none;
+}
+
+.template-content-action-bar {
+  margin-bottom: 16px;
+  text-align: right;
+}
+
+.empty-template-inner {
+  text-align: center;
+  width: 100%;
 }
 
 .step-value .type-hint {

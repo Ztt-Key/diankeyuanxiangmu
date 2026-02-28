@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, defineEmits, defineExpose, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, watch, defineEmits, nextTick, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import {

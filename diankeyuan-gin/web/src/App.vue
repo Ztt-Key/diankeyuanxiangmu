@@ -31,6 +31,9 @@
   .gva-body-h {
     min-height: calc(100% - 3rem);
   }
+  .gva-body-relative {
+    position: relative;
+  }
 
   .gva-container {
     height: calc(100% - 2.5rem);

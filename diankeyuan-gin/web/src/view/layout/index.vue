@@ -32,9 +32,13 @@
           <router-view v-if="reloadFlag" v-slot="{ Component, route }">
             <div
               id="gva-base-load-dom"
-              class="gva-body-h bg-gray-50 dark:bg-slate-800"
+              class="gva-body-h bg-gray-50 dark:bg-slate-800 gva-body-relative"
             >
-              <transition mode="out-in" name="el-fade-in-linear">
+              <!-- 园区3D 页不设 transition，避免 out-in 造成的闪屏 -->
+              <transition
+                mode="out-in"
+                :name="isThreeJsRoute(route) ? '' : 'el-fade-in-linear'"
+              >
                 <keep-alive :include="routerStore.keepAliveRouters">
                   <component :is="Component" :key="route.fullPath" />
                 </keep-alive>
@@ -81,6 +85,11 @@
   const router = useRouter()
   const route = useRoute()
   const routerStore = useRouterStore()
+
+  const isThreeJsRoute = (r) => {
+    const path = r?.meta?.path || r?.path || ''
+    return String(path).includes('threeJs')
+  }
 
   onMounted(() => {
     // 挂载一些通用的事件

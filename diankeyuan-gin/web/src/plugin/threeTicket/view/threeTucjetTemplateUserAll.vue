@@ -749,7 +749,7 @@ import { imgBaseUrl } from '@/config'
 // 全量引入格式化工具 请按需保留
 import { formatDate, formatBoolean, filterDataSource, returnArrImg, onDownloadFile } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ref, reactive, computed, onMounted, onUnmounted, h, nextTick, defineExpose, toRefs, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, h, nextTick, toRefs, watch } from 'vue'
 
 import {
   createThreeTucjetTemplate,

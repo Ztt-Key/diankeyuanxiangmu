@@ -818,116 +818,56 @@ const ObjectDisplay = defineComponent({
       );
     };
 
-    // 将英文键名替换为中文
+    // 将英文键名替换为中文（与主组件一致，不区分大小写）
     const keyToDisplay = (key) => {
-      // 确保key是字符串类型
-      if (key === null || key === undefined) {
-        return '';
-      }
-
-      // 将非字符串类型的key转为字符串
+      if (key === null || key === undefined) return '';
       const keyStr = String(key);
-
+      const keyLower = keyStr.toLowerCase();
       const translations = {
-        name: '名称',
-        title: '标题',
-        description: '描述',
-        content: '内容',
-        type: '类型',
-        status: '状态',
-        priority: '优先级',
-        duration: '持续时间',
-        assignee: '负责人',
-        reporter: '报告人',
-        deadline: '截止日期',
-        createdAt: '创建时间',
-        updatedAt: '更新时间',
-        tags: '标签',
-        category: '分类',
-        level: '级别',
-        value: '值',
-        id: '编号',
-        startTime: '开始时间',
-        endTime: '结束时间',
-        progress: '进度',
-        result: '结果',
-        action: '操作',
-        actions: '操作',
-        reason: '原因',
-        solution: '解决方案',
-        steps: '步骤',
-        params: '参数',
-        config: '配置',
-        options: '选项',
-        target: '目标',
-        source: '来源',
-        message: '消息',
-        isRequired: '是否必须',
-        isEnabled: '是否启用',
-        isVisible: '是否可见',
-        isActive: '是否激活',
-        required: '必填',
-        placeholder: '占位提示',
-        columns: '列'
+        name: '名称', title: '标题', description: '描述', content: '内容', type: '类型', status: '状态',
+        priority: '优先级', duration: '持续时间', assignee: '负责人', reporter: '报告人', deadline: '截止日期',
+        createdat: '创建时间', updatedat: '更新时间', tags: '标签', category: '分类', level: '级别',
+        value: '值', id: '编号', starttime: '开始时间', endtime: '结束时间', progress: '进度', result: '结果',
+        action: '操作', actions: '操作', reason: '原因', solution: '解决方案', steps: '步骤', params: '参数',
+        config: '配置', options: '选项', target: '目标', source: '来源', message: '消息',
+        isrequired: '是否必须', isenabled: '是否启用', isvisible: '是否可见', isactive: '是否激活',
+        required: '是否必填', placeholder: '占位提示', columns: '列', key: '键名', label: '标签',
+        defaultvalue: '默认值', items: '选项列表', rules: '校验规则', disabled: '禁用', readonly: '只读',
+        visible: '可见', min: '最小值', max: '最大值', length: '长度', pattern: '格式', errormessage: '错误提示',
+        row: '行', col: '列', colspan: '列宽', rowspan: '行宽', width: '宽度', height: '高度', unit: '单位',
+        format: '格式', datatype: '数据类型', inputlist: '输入列表', datetimerange: '日期时间范围', datetime: '日期时间',
+        requiresignature: '是否需签名', 'require signature': '是否需签名', require_signature: '是否需签名'
       };
-
-      return translations[keyStr] || keyStr.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+      return translations[keyLower] || translations[keyStr] || translations[keyStr.replace(/\s+/g, ' ').toLowerCase()] || keyStr.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
     };
 
-    // 格式化简单值（含类型等英文字段值转中文）
+    // 格式化简单值（与主组件一致，英文字段值转中文）
     const formatSimpleValue = (value, key) => {
-      if (value === null || value === undefined) {
-        return '空值';
-      } else if (typeof value === 'boolean') {
+      if (value === null || value === undefined) return '空值';
+      const keyLower = String(key).toLowerCase();
+      if (keyLower === 'required' || keyLower === 'isrequired' || keyLower === 'isenabled' || keyLower === 'isvisible' || keyLower === 'isactive' || keyLower === 'requiresignature' || keyLower === 'require_signature' || keyLower === 'require signature') {
+        if (typeof value === 'boolean') return value ? '是' : '否';
+        if (typeof value === 'string') {
+          const v = value.toLowerCase();
+          if (v === 'true' || v === 'yes' || v === '1') return '是';
+          if (v === 'false' || v === 'no' || v === '0') return '否';
+        }
         return value ? '是' : '否';
-      } else if (typeof value === 'string') {
-        const keyLower = String(key).toLowerCase();
-        if (keyLower === 'type') {
-          const typeMap = {
-            'input': '创建',
-            'audit': '审核',
-            'auditor': '审核人',
-            'table': '表格',
-            'task': '任务',
-            'bug': '缺陷',
-            'feature': '功能',
-            'improvement': '改进',
-            'textarea': '多行文本',
-            'signature': '签名',
-            'dateTimeRange': '日期时间范围',
-            'checkbox': '勾选',
-            'select': '选择'
-          };
-          return typeMap[value] || value;
-        }
-        if (key === 'status') {
-          const statusMap = {
-            'pending': '待处理',
-            'processing': '处理中',
-            'completed': '已完成',
-            'rejected': '已拒绝',
-            'approved': '已批准'
-          };
-          return statusMap[value] || value;
-        } else if (key === 'priority') {
-          const priorityMap = {
-            'high': '高',
-            'medium': '中',
-            'low': '低'
-          };
-          return priorityMap[value] || value;
-        }
-
-        // 对于长字符串，截取并添加省略号
-        if (value.length > 100) {
-          return value.substring(0, 100) + '...';
-        }
-        return value;
-      } else if (typeof value === 'number') {
-        return value.toString();
-      } else {
-        return String(value);
       }
+      if (typeof value === 'boolean') return value ? '是' : '否';
+      if (typeof value === 'string') {
+        const valLower = value.toLowerCase();
+        if (keyLower === 'type') {
+          const typeMap = { 'input': '创建', 'audit': '审核', 'auditor': '审核人', 'table': '表格', 'textarea': '多行文本', 'signature': '签名', 'datetimerange': '日期时间范围', 'dateTimeRange': '日期时间范围', 'checkbox': '勾选', 'select': '选择', 'input-list': '输入列表', 'inputlist': '输入列表', 'datetime': '日期时间', 'date': '日期', 'time': '时间', 'number': '数字', 'text': '文本', 'password': '密码', 'email': '邮箱', 'phone': '电话', 'url': '链接', 'extension': '延期申请', 'change_responsible': '变更负责人', 'complete': '工作完成' };
+          return typeMap[valLower] || typeMap[value] || value;
+        }
+        const commonValueMap = { 'true': '是', 'false': '否', 'yes': '是', 'no': '否', 'enabled': '启用', 'disabled': '禁用', 'visible': '可见', 'hidden': '隐藏', 'required': '必填', 'optional': '选填', 'pending': '待处理', 'processing': '处理中', 'completed': '已完成', 'approved': '已批准', 'rejected': '已拒绝', 'high': '高', 'medium': '中', 'low': '低' };
+        if (commonValueMap[valLower] !== undefined) return commonValueMap[valLower];
+        if (value.length > 100) return value.substring(0, 100) + '...';
+        return value;
+      }
+      if (typeof value === 'number') return value.toString();
+      return String(value);
     };
 
     // 获取值类型
@@ -1481,15 +1421,13 @@ const enterDialog = async () => {
   })
 }
 
-// 将英文键名替换为中文
+// 将英文键名替换为中文（不区分大小写，覆盖工作票常见字段）
 const keyToDisplay = (key) => {
-  // 确保key是字符串类型
   if (key === null || key === undefined) {
     return '';
   }
-
-  // 将非字符串类型的key转为字符串
   const keyStr = String(key);
+  const keyLower = keyStr.toLowerCase();
 
   const translations = {
     name: '名称',
@@ -1503,15 +1441,15 @@ const keyToDisplay = (key) => {
     assignee: '负责人',
     reporter: '报告人',
     deadline: '截止日期',
-    createdAt: '创建时间',
-    updatedAt: '更新时间',
+    createdat: '创建时间',
+    updatedat: '更新时间',
     tags: '标签',
     category: '分类',
     level: '级别',
     value: '值',
     id: '编号',
-    startTime: '开始时间',
-    endTime: '结束时间',
+    starttime: '开始时间',
+    endtime: '结束时间',
     progress: '进度',
     result: '结果',
     action: '操作',
@@ -1525,16 +1463,44 @@ const keyToDisplay = (key) => {
     target: '目标',
     source: '来源',
     message: '消息',
-    isRequired: '是否必须',
-    isEnabled: '是否启用',
-    isVisible: '是否可见',
-    isActive: '是否激活',
-    required: '必填',
+    isrequired: '是否必须',
+    isenabled: '是否启用',
+    isvisible: '是否可见',
+    isactive: '是否激活',
+    required: '是否必填',
     placeholder: '占位提示',
-    columns: '列'
+    columns: '列',
+    key: '键名',
+    label: '标签',
+    defaultvalue: '默认值',
+    items: '选项列表',
+    rules: '校验规则',
+    disabled: '禁用',
+    readonly: '只读',
+    visible: '可见',
+    min: '最小值',
+    max: '最大值',
+    length: '长度',
+    pattern: '格式',
+    errormessage: '错误提示',
+    row: '行',
+    col: '列',
+    colspan: '列宽',
+    rowspan: '行宽',
+    width: '宽度',
+    height: '高度',
+    unit: '单位',
+    format: '格式',
+    datatype: '数据类型',
+    inputlist: '输入列表',
+    datetimerange: '日期时间范围',
+    datetime: '日期时间',
+    requiresignature: '是否需签名',
+    'require signature': '是否需签名',
+    require_signature: '是否需签名'
   };
 
-  return translations[keyStr] || keyStr.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase());
+  return translations[keyLower] || translations[keyStr] || translations[keyStr.replace(/\s+/g, ' ').toLowerCase()] || keyStr.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 };
 
 // 格式化简单值（查看详情时英文字段值转中文，供模板使用）
@@ -1542,11 +1508,23 @@ const formatSimpleValue = (value, key) => {
   if (value === null || value === undefined) {
     return '空值';
   }
+  const keyLower = String(key).toLowerCase();
+  // 是否必填、是否启用等字段：统一显示为 是/否
+      if (keyLower === 'required' || keyLower === 'isrequired' || keyLower === 'isenabled' || keyLower === 'isvisible' || keyLower === 'isactive' || keyLower === 'requiresignature' || keyLower === 'require_signature' || keyLower === 'require signature') {
+        if (typeof value === 'boolean') return value ? '是' : '否';
+        if (typeof value === 'string') {
+          const v = value.toLowerCase();
+          if (v === 'true' || v === 'yes' || v === '1') return '是';
+          if (v === 'false' || v === 'no' || v === '0') return '否';
+        }
+        return value ? '是' : '否';
+      }
   if (typeof value === 'boolean') {
     return value ? '是' : '否';
   }
   if (typeof value === 'string') {
-    const keyLower = String(key).toLowerCase();
+    const valLower = value.toLowerCase();
+
     if (keyLower === 'type') {
       const typeMap = {
         'input': '创建',
@@ -1555,12 +1533,53 @@ const formatSimpleValue = (value, key) => {
         'table': '表格',
         'textarea': '多行文本',
         'signature': '签名',
+        'datetimerange': '日期时间范围',
         'dateTimeRange': '日期时间范围',
         'checkbox': '勾选',
-        'select': '选择'
+        'select': '选择',
+        'input-list': '输入列表',
+        'inputlist': '输入列表',
+        'datetime': '日期时间',
+        'date': '日期',
+        'time': '时间',
+        'number': '数字',
+        'text': '文本',
+        'password': '密码',
+        'email': '邮箱',
+        'phone': '电话',
+        'url': '链接',
+        'extension': '延期申请',
+        'change_responsible': '变更负责人',
+        'complete': '工作完成'
       };
-      return typeMap[value] || value;
+      return typeMap[valLower] || typeMap[value] || value;
     }
+
+    // 通用英文字符串转中文（如 true/false/yes/no 等）
+    const commonValueMap = {
+      'true': '是',
+      'false': '否',
+      'yes': '是',
+      'no': '否',
+      'enabled': '启用',
+      'disabled': '禁用',
+      'visible': '可见',
+      'hidden': '隐藏',
+      'required': '必填',
+      'optional': '选填',
+      'pending': '待处理',
+      'processing': '处理中',
+      'completed': '已完成',
+      'approved': '已批准',
+      'rejected': '已拒绝',
+      'high': '高',
+      'medium': '中',
+      'low': '低'
+    };
+    if (commonValueMap[valLower] !== undefined) {
+      return commonValueMap[valLower];
+    }
+
     if (value.length > 100) {
       return value.substring(0, 100) + '...';
     }

@@ -28,8 +28,9 @@ defineOptions({
 
 // 园区 3D 候选地址（按优先级尝试），可随环境修改或通过环境变量扩展
 const CANDIDATE_URLS = [
-  'http://localhost:8082/',
+  
   'http://localhost:8081/',
+  'http://localhost:8082/',
   'http://localhost:8083/',
   'http://localhost:8084/'
 ]

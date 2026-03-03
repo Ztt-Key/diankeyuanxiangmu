@@ -109,6 +109,41 @@ export default {
             
             console.log('暗色线框材质应用完成');
         },
+        // 判断线缆模型名是否属于指定配置列表（与高亮匹配逻辑一致）
+        isCableInList(objName, modelNames) {
+            if (!modelNames || !modelNames.length) return false;
+            const nameSet = new Set(modelNames.map(n => n.toLowerCase()));
+            const lower = objName.toLowerCase();
+            if (nameSet.has(lower)) return true;
+            for (const n of nameSet) {
+                if (lower.includes(n)) return true;
+            }
+            const objNum = objName.match(/\d+/g);
+            for (const n of nameSet) {
+                const cableNum = n.match(/\d+/g);
+                if (cableNum && objNum && objNum.some(num => cableNum.includes(num))) return true;
+            }
+            return false;
+        },
+        // 对「非当前选中」的线缆应用暗色显示，保留层次感又不单调
+        applyDimmedToNonSelectedCables(modelNames) {
+            if (!modelNames || !Array.isArray(modelNames) || !window.app || !window.app.model) return;
+            const dimmedMaterial = new THREE.MeshBasicMaterial({
+                color: 0x1a4d6b,
+                transparent: true,
+                opacity: 0.35,
+                side: THREE.DoubleSide,
+                wireframe: false
+            });
+            dimmedMaterial.userData = { isDimmedCableMaterial: true };
+            window.app.model.traverse((obj) => {
+                if (!obj.isMesh || obj.name.toLowerCase().indexOf('线缆') === -1) return;
+                if (this.isCableInList(obj.name, modelNames)) return;
+                if (!obj.userData.originalMaterial) obj.userData.originalMaterial = obj.material;
+                obj.material = dimmedMaterial.clone();
+                obj.visible = true;
+            });
+        },
         handleCableClick(cable) {
             console.log('点击线缆:', cable);
             
@@ -119,7 +154,10 @@ export default {
                 // 设置当前活动的线缆ID
                 this.activeCableId = cable.id;
                 
-                // 注意：不需要再次调用applyDarkWireframeMaterial，因为resetAllMaterials已经调用了
+                // 非当前选中的线缆用暗色显示，当前项用高亮，既有层次又不单调
+                if (cable.Cacheodel && Array.isArray(cable.Cacheodel)) {
+                    this.applyDimmedToNonSelectedCables(cable.Cacheodel);
+                }
                 
                 // 高亮显示对应的线缆模型
                 if (cable.Cacheodel && Array.isArray(cable.Cacheodel)) {
